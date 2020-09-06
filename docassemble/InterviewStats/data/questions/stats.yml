@@ -1,0 +1,38 @@
+---
+metadata:
+  title: Administrative interview
+  short title: Admin
+  sessions are unique: True
+  required privileges:
+    - admin
+---
+modules:
+  - .snapshot_statistics
+---
+question: |
+  Tell us what you're looking for
+fields:
+  - Filename: filename
+    default: docassemble.CDCEvictionMoratorium:cdc_eviction_moratorium.yml
+  - Variable: variable_name    
+    default: zip
+---
+code: |
+  stats = get_stats(filename, variable_name)
+  
+  stat_dictionary = {}
+  for stat in stats:
+    if stat in stat_dictionary:
+      stat_dictionary[stat] += 1
+    else:
+      stat_dictionary[stat] = 1      
+---
+mandatory: True
+question: |
+  Total number of results: ${ len(stats) }
+subquestion: |
+  Data | Count
+  ---|---
+  % for stat in stat_dictionary:
+  ${ stat} | ${stat_dictionary[stat]}
+  % endfor
