@@ -13,7 +13,7 @@ question: |
   Tell us what you're looking for
 fields:
   - Filename: filename
-    default: docassemble.CDCEvictionMoratorium:cdc_eviction_moratorium.yml
+    default: docassemble.CDCEvictionMoratorium:data/questions/cdc_eviction_moratorium.yml
   - Variable: variable_name    
     default: zip
 ---
