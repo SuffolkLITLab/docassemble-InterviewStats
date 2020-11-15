@@ -11,28 +11,21 @@ modules:
 ---
 question: |
   Tell us what you're looking for
+  
 fields:
   - Filename: filename
+    code: |
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()]
     default: docassemble.CDCEvictionMoratorium:data/questions/cdc_eviction_moratorium.yml
-  - Variable: variable_name    
-    default: zip
 ---
 code: |
-  stats = get_stats(filename, variable_name)
-  
-  stat_dictionary = {}
-  for stat in stats:
-    if stat in stat_dictionary:
-      stat_dictionary[stat] += 1
-    else:
-      stat_dictionary[stat] = 1      
+  stats = get_stats(filename)
 ---
 mandatory: True
 question: |
+
   Total number of results: ${ len(stats) }
 subquestion: |
-  Data | Count
-  ---|---
-  % for stat in stat_dictionary:
-  ${ stat} | ${stat_dictionary[stat]}
-  % endfor
+  `${ stats }`
+buttons:
+  - Restart: restart
