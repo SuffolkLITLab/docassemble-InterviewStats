@@ -9,14 +9,34 @@ metadata:
 modules:
   - .snapshot_statistics
 ---
+objects:
+  - xlsx_output: DAFile.using(filename="stats.xlsx")
+---
+id: interview order
+mandatory: True
+code: |
+  filename
+  formatted_data
+  saved_data
+  view_data
+---
+code: |
+  xlsx_output.initialize(filename="stats.xlsx")
+  writer = pd.ExcelWriter(xlsx_output.path(),
+    engine='xlsxwriter',
+    options={'remove_timezone': True})
+  formatted_data.to_excel(writer, index=False)
+  writer.save()
+  xlsx_output.commit()  
+  del writer
+  saved_data = True
+---
 question: |
-  Tell us what you're looking for
-  
+  What interview do you want to view statistics for?  
 fields:
   - Filename: filename
     code: |
       [{interview.get('filename'): interview.get('title')} for interview in interview_menu()]
-    default: docassemble.CDCEvictionMoratorium:data/questions/cdc_eviction_moratorium.yml
 ---
 code: |
   if 'data/questions' in filename:
@@ -26,10 +46,27 @@ code: |
 ---
 code: |
   first_row = next(iter(stats))
-  if first_row and isinstance(first_row, tuple) and isinstance(first_row[0], dict):
-    columns = list(first_row[0].keys())
+  if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
+    columns = list(first_row[1].keys())
 ---
-mandatory: True
+code: |
+  # import numpy as np
+  import pandas as pd
+---
+code: |
+  for stat in stats:
+    stat[1]['Modtime'] = stat[0]
+  formatted_data = pd.DataFrame([stat[1] for stat in stats])
+---
+event: view_data
+question: |
+  Total number of results: ${ len(stats) }
+subquestion: |
+  ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
+  
+  [Download](${ xlsx_output.url_for() })
+---
+# mandatory: True
 question: |
 
   Total number of results: ${ len(stats) }
@@ -37,15 +74,17 @@ subquestion: |
   <table class="table table-striped">
   <tbody>
   <tr>
+  <td>Modtime</td>
   % for column in columns:
   <td> ${ column } </td>
   % endfor
   </tr>
   % for stat in stats:
   <tr>
+  <td>${ stat[0] }</td>
   % for column in columns:
   <td>
-  ${stat[0][column] }
+  ${stat[1][column] }
   </td>
   % endfor
   </tr>

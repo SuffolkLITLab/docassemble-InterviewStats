@@ -6,7 +6,7 @@ def get_stats(filename):
   conn = variables_snapshot_connection()
   cur = conn.cursor()
   # use a parameterized query to prevent SQL injection
-  query = "select data from jsonstorage where filename=%(filename)s"
+  query = "select modtime, data from jsonstorage where filename=%(filename)s"
   cur.execute(query, {'filename': filename})
   records = list()
   for record in cur.fetchall():
