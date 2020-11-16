@@ -19,13 +19,37 @@ fields:
     default: docassemble.CDCEvictionMoratorium:data/questions/cdc_eviction_moratorium.yml
 ---
 code: |
-  stats = get_stats(filename)
+  if 'data/questions' in filename:
+    stats = get_stats(filename)
+  else:
+    stats = get_stats(filename.replace(':',':data/questions/'))
+---
+code: |
+  first_row = next(iter(stats))
+  if first_row and isinstance(first_row, tuple) and isinstance(first_row[0], dict):
+    columns = list(first_row[0].keys())
 ---
 mandatory: True
 question: |
 
   Total number of results: ${ len(stats) }
-subquestion: |
-  `${ stats }`
+subquestion: |  
+  <table class="table table-striped">
+  <tbody>
+  <tr>
+  % for column in columns:
+  <td> ${ column } </td>
+  % endfor
+  </tr>
+  % for stat in stats:
+  <tr>
+  % for column in columns:
+  <td>
+  ${stat[0][column] }
+  </td>
+  % endfor
+  </tr>
+  % endfor
+  </table>
 buttons:
   - Restart: restart

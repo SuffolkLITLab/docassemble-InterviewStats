@@ -5,8 +5,9 @@ __all__ = ['get_stats']
 def get_stats(filename):
   conn = variables_snapshot_connection()
   cur = conn.cursor()
-  query = "select data from jsonstorage where filename='" + filename + "'"
-  cur.execute(query)
+  # use a parameterized query to prevent SQL injection
+  query = "select data from jsonstorage where filename=%(filename)s"
+  cur.execute(query, {'filename': filename})
   records = list()
   for record in cur.fetchall():
     records.append(record)
