@@ -2,7 +2,7 @@
 metadata:
   title: Administrative interview
   short title: Admin
-  sessions are unique: True
+  # sessions are unique: True
   required privileges:
     - admin
 ---
@@ -62,33 +62,28 @@ event: view_data
 question: |
   Total number of results: ${ len(stats) }
 subquestion: |
+  Group by: 
+  % for col in columns:
+  [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
+  % endfor
+  
   ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
   
-  [Download](${ xlsx_output.url_for() })
----
-# mandatory: True
-question: |
-
-  Total number of results: ${ len(stats) }
-subquestion: |  
-  <table class="table table-striped">
-  <tbody>
-  <tr>
-  <td>Modtime</td>
-  % for column in columns:
-  <td> ${ column } </td>
-  % endfor
-  </tr>
-  % for stat in stats:
-  <tr>
-  <td>${ stat[0] }</td>
-  % for column in columns:
-  <td>
-  ${stat[1][column] }
-  </td>
-  % endfor
-  </tr>
-  % endfor
-  </table>
+  [:file-excel: Download](${ xlsx_output.url_for() })
 buttons:
   - Restart: restart
+---
+event: show_grouped_data
+question: |
+  Total number of results: ${ len(stats) }
+subquestion: |  
+  Group by: 
+  % for col in columns:
+  [${col}](${ url_action('show_grouped_data', group_by = col)  }) 
+  % endfor
+  
+  ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
+  
+  [:file-excel: Download](${ xlsx_output.url_for() })
+buttons:
+  - Restart: restart  
