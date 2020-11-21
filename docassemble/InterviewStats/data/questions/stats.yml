@@ -2,7 +2,7 @@
 metadata:
   title: Administrative interview
   short title: Admin
-  # sessions are unique: True
+  temporary session: True
   required privileges:
     - admin
 ---
@@ -21,7 +21,7 @@ code: |
   view_data
 ---
 code: |
-  xlsx_output.initialize(filename="stats.xlsx")
+  xlsx_output.initialize(filename=space_to_underscore(filename) + "_stats.xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
     options={'remove_timezone': True})
@@ -39,15 +39,25 @@ fields:
       [{interview.get('filename'): interview.get('title')} for interview in interview_menu()]
 ---
 code: |
+  interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
+  #for interview in interview_menu():
+  #  if interview.get('filename') == filename:  
+  #    interview_title = interview.get('
+---
+code: |
   if 'data/questions' in filename:
     stats = get_stats(filename)
   else:
     stats = get_stats(filename.replace(':',':data/questions/'))
 ---
+need: stats
 code: |
-  first_row = next(iter(stats))
-  if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
-    columns = list(first_row[1].keys())
+  try:
+    first_row = next(iter(stats))
+    if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
+      columns = list(first_row[1].keys())
+  except:
+    columns = ['']
 ---
 code: |
   # import numpy as np
@@ -60,8 +70,9 @@ code: |
 ---
 event: view_data
 question: |
-  Total number of results: ${ len(stats) }
+  Total number of results for ${interview_title}: ${ len(stats) }
 subquestion: |
+  % if len(stats):
   Group by: 
   % for col in columns:
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
@@ -70,6 +81,7 @@ subquestion: |
   ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
   
   [:file-excel: Download](${ xlsx_output.url_for() })
+  % endif
 buttons:
   - Restart: restart
 ---
