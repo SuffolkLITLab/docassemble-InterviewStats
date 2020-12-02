@@ -21,14 +21,12 @@ def make_heatmap(loc_df, col_name='zip'):
   """Returns a bokeh layout, with a choropleth map of locations we've received
      Expects the dataframe to contain rows with a `col_name` column
   """
-  to_rm = loc_df[col_name].replace(np.nan, '').str.len() == 0
+  to_rm = loc_df[col_name].str.len() == 0
   loc_df = loc_df.drop(to_rm.index[to_rm])
   loc_df[col_name + '_counts'] = 1
   loc_df = loc_df.groupby(col_name).sum().reset_index(level=0)
   loc_df[col_name + '_percent'] = loc_df[col_name + '_counts'] / loc_df[col_name + '_counts'].sum()
   if col_name.lower() == 'zip':
-    search = SearchEngine(simple_zipcode=False, db_file_dir='/tmp') # TODO(brycew): hard US assumption
-    search.by_zipcode().border_polygon
 
     nomi = pgeocode.Nominatim('us') # TODO(brycew): US assumption
     loc_df['geometry'] = loc_df[col_name].apply(
@@ -80,10 +78,10 @@ def make_heatmap(loc_df, col_name='zip'):
   #TODO(brycew): continue here, make the bokeh map, figure out how to display the html in-page?
   # Alternatives: d3 to be fancier
 
-def write_heatmap_file(loc_df, output_file)
+def write_heatmap_file(loc_df, output_file):
   layout = make_heatmap(loc_df, 'zip')
   html = file_html(layout, CDN, 'All Data')
-  with open('{}.html'.format(output_file), 'w') as f:
+  with open('{}'.format(output_file), 'w') as f:
     f.write(html)
 
 def main(argv):

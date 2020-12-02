@@ -11,6 +11,7 @@ modules:
 ---
 objects:
   - xlsx_output: DAFile.using(filename="stats.xlsx")
+  - html_output: DAFile.using(filename="stats.html")
 ---
 id: interview order
 mandatory: True
@@ -21,7 +22,8 @@ code: |
   view_data
 ---
 code: |
-  xlsx_output.initialize(filename=space_to_underscore(filename) + "_stats.xlsx")
+  proper_name = space_to_underscore(filename) + "_stats"
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
     options={'remove_timezone': True})
@@ -29,6 +31,9 @@ code: |
   writer.save()
   xlsx_output.commit()  
   del writer
+  html_output.initialize(filename = proper_name + ".html")
+  write_heatmap_file(formatted_data, html_output.path()) 
+  html_output.commit()
   saved_data = True
 ---
 question: |
@@ -67,6 +72,7 @@ code: |
   for stat in stats:
     stat[1]['Modtime'] = stat[0]
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
+  geo_data = make_heatmap(formatted_data)
 ---
 event: view_data
 question: |
@@ -81,6 +87,7 @@ subquestion: |
   ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
   
   [:file-excel: Download](${ xlsx_output.url_for() })
+  [View map](${ html_output.url_for() })
   % endif
 buttons:
   - Restart: restart
@@ -97,5 +104,6 @@ subquestion: |
   ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
   
   [:file-excel: Download](${ xlsx_output.url_for() })
+  [View map](${ html_output.url_for() })
 buttons:
   - Restart: restart  
