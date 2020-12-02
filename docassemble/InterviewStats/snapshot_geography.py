@@ -15,6 +15,8 @@ import geopandas as gpd
 import sys
 import cenpy
 
+__all__ = ['make_heatmap', 'write_heatmap_file']
+
 def make_heatmap(loc_df, col_name='zip'):
   """Returns a bokeh layout, with a choropleth map of locations we've received
      Expects the dataframe to contain rows with a `col_name` column
@@ -31,7 +33,7 @@ def make_heatmap(loc_df, col_name='zip'):
     all_zip_codes = loc_df['zip'].to_list()
     full_where = ' or '.join(['ZCTA5={}'.format(x) for x in all_zip_codes])
     print(full_where)
-    all_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where) 
+    all_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where)
     geo_loc_counts = all_zip_shapes.merge(loc_df, left_on='BASENAME', right_on='zip')
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857') # required for tile mapping
   else:
@@ -39,7 +41,7 @@ def make_heatmap(loc_df, col_name='zip'):
     # state_fips_code = cenpy.explorer.fips_table('STATE').set_index('State Abbreviation').loc['MA']['FIPS Code']
     print('ERROR: locations besides zips not supported right now')
     return None
-  
+
   print(geo_loc_counts)
 
   geosource = GeoJSONDataSource(geojson=geo_loc_counts.to_json())
@@ -56,7 +58,7 @@ def make_heatmap(loc_df, col_name='zip'):
   map_plot.add_tile(get_provider(Vendors.CARTODBPOSITRON))
 
   # Settled on brewer for colors: https://colorbrewer2.org
-  # Was considering `colorcet`, but https://arxiv.org/pdf/1509.03700v1.pdf suggests to stick with brewer and 
+  # Was considering `colorcet`, but https://arxiv.org/pdf/1509.03700v1.pdf suggests to stick with brewer and
   # use colorcet for geophysical exploration or medical images
   palette = list(reversed(brewer['YlGnBu'][5])) # Gets yellow as low and blue as high
   max_val = max(geo_loc_counts[col_name + '_counts'])
