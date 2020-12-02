@@ -5,7 +5,7 @@ from bokeh.tile_providers import Vendors, get_provider
 from bokeh.resources import CDN
 from bokeh.palettes import brewer
 from bokeh.layouts import widgetbox, row, column
-from bokeh.embed import file_html
+from bokeh.embed import file_html, components
 from shapely import wkt
 
 import pandas as pd
@@ -15,9 +15,9 @@ import geopandas as gpd
 import sys
 import cenpy
 
-__all__ = ['make_heatmap', 'write_heatmap_file']
+__all__ = ['make_usage_map', 'write_standalone_usage_map']
 
-def make_heatmap(loc_df, col_name='zip'):
+def make_usage_map(loc_df, col_name='zip'):
   """Returns a bokeh layout, with a choropleth map of locations we've received
      Expects the dataframe to contain rows with a `col_name` column
   """
@@ -42,14 +42,11 @@ def make_heatmap(loc_df, col_name='zip'):
     print('ERROR: locations besides zips not supported right now')
     return None
 
-  print(geo_loc_counts)
-
   geosource = GeoJSONDataSource(geojson=geo_loc_counts.to_json())
-  print(geosource)
 
   # Just a normal map
   TOOLTIPS = [('Zip', '@zip'), ('Number of users', '@{name}'.format(name=col_name + '_counts') + '{0.000}')]
-  map_plot = figure(title=col_name+'_heatmap', tooltips=TOOLTIPS)
+  map_plot = figure(title='Usage map over ' + col_name, tooltips=TOOLTIPS)
   map_plot.sizing_mode = 'stretch_width'
   map_plot.toolbar.active_scroll = map_plot.select_one(WheelZoomTool)
 
@@ -88,8 +85,19 @@ def make_heatmap(loc_df, col_name='zip'):
   #TODO(brycew): continue here, make the bokeh map, figure out how to display the html in-page?
   # Alternatives: d3 to be fancier
 
-def write_heatmap_file(loc_df, output_file):
-  layout = make_heatmap(loc_df, 'zip')
+def get_embedable_usage_map(layout):
+  script, div = components(layout)
+  # from https://docs.bokeh.org/en/latest/docs/user_guide/embed.html#components
+  inline_cdn = """<script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.2.3.min.js"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.2.3.min.js"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.2.3.min.js"
+        crossorigin="anonymous"></script>
+        """
+  return script, div, inline_cdn
+
+def write_standalone_usage_map(layout, output_file):
   html = file_html(layout, CDN, 'All Data')
   with open('{}'.format(output_file), 'w') as f:
     f.write(html)
@@ -98,7 +106,8 @@ def main(argv):
   if len(argv) > 3:
     print('Need <input csv> <output_html>')
   loc_df = pd.read_csv(argv[1], dtype='str')
-  write_heatmap_file(loc_df, argv[2])
+  layout = make_usage_map(loc_df, 'zip')
+  write_standalone_usage_map(layout, argv[2])
 
 if __name__ == '__main__':
   main(sys.argv)
