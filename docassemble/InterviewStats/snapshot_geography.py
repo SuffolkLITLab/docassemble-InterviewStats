@@ -1,7 +1,7 @@
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, WheelZoomTool, Dropdown,\
                          Paragraph, DataTable, ColumnDataSource, TableColumn, LinearScale
-from bokeh.tile_providers import STAMEN_TERRAIN, get_provider
+from bokeh.tile_providers import Vendors, get_provider
 from bokeh.resources import CDN
 from bokeh.palettes import brewer
 from bokeh.layouts import widgetbox, row, column
@@ -13,9 +13,7 @@ import numpy as np
 import geopandas as gpd
 
 import sys
-
-import pgeocode
-from uszipcode import SearchEngine
+import cenpy
 
 def make_heatmap(loc_df, col_name='zip'):
   """Returns a bokeh layout, with a choropleth map of locations we've received
@@ -27,44 +25,54 @@ def make_heatmap(loc_df, col_name='zip'):
   loc_df = loc_df.groupby(col_name).sum().reset_index(level=0)
   loc_df[col_name + '_percent'] = loc_df[col_name + '_counts'] / loc_df[col_name + '_counts'].sum()
   if col_name.lower() == 'zip':
-
-    nomi = pgeocode.Nominatim('us') # TODO(brycew): US assumption
-    loc_df['geometry'] = loc_df[col_name].apply(
-      lambda x: wkt.loads('POINT ({a.longitude} {a.latitude})'.format(a=nomi.query_postal_code(str(x))))
-    )
-    geo_loc_counts = gpd.GeoDataFrame(loc_df, geometry='geometry')
-    geo_loc_counts.crs = 'EPSG:4326'
+    api_conn = cenpy.remote.APIConnection('DECENNIALSF12010') # short code for census product (TODO(brycew): how to find other short codes?)
+    api_conn.set_mapservice('tigerWMS_Census2010') # other map services are at `cenpy.tiger.available()` (should match the census product)
+    # Layer 8 should be the ZIP Code Tabulation Areas
+    all_zip_codes = loc_df['zip'].to_list()
+    full_where = ' or '.join(['ZCTA5={}'.format(x) for x in all_zip_codes])
+    print(full_where)
+    all_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where) 
+    geo_loc_counts = all_zip_shapes.merge(loc_df, left_on='BASENAME', right_on='zip')
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857') # required for tile mapping
-    # How big should the dots be? Have the largest be 1 mile?
   else:
+    # If not doing zip codes, you can use the State code to filter things down.
+    # state_fips_code = cenpy.explorer.fips_table('STATE').set_index('State Abbreviation').loc['MA']['FIPS Code']
     print('ERROR: locations besides zips not supported right now')
     return None
   
-  geo_loc_counts[col_name +'_sizes'] = np.interp(geo_loc_counts[col_name + '_counts'], (1, max(loc_df[col_name + '_counts'])), (10, 30), left=0)
-  print(loc_df)
   print(geo_loc_counts)
 
   geosource = GeoJSONDataSource(geojson=geo_loc_counts.to_json())
   print(geosource)
 
   # Just a normal map
-  map_plot = figure(title=col_name+'_heatmap')
+  TOOLTIPS = [('Zip', '@zip'), ('Number of users', '@{name}'.format(name=col_name + '_counts') + '{0.000}')]
+  map_plot = figure(title=col_name+'_heatmap', tooltips=TOOLTIPS)
   map_plot.sizing_mode = 'stretch_width'
   map_plot.toolbar.active_scroll = map_plot.select_one(WheelZoomTool)
 
   # https://docs.bokeh.org/en/latest/docs/user_guide/geo.html?highlight=geo
   # https://docs.bokeh.org/en/latest/docs/reference/tile_providers.html#bokeh-tile-providers
-  tile_provider = get_provider(STAMEN_TERRAIN)
-  map_plot.add_tile(tile_provider)
+  map_plot.add_tile(get_provider(Vendors.CARTODBPOSITRON))
 
-  map_plot.circle(x='x', y='y', size=col_name+'_sizes', color='red', source=geosource)
+  # Settled on brewer for colors: https://colorbrewer2.org
+  # Was considering `colorcet`, but https://arxiv.org/pdf/1509.03700v1.pdf suggests to stick with brewer and 
+  # use colorcet for geophysical exploration or medical images
+  palette = list(reversed(brewer['YlGnBu'][5])) # Gets yellow as low and blue as high
+  max_val = max(geo_loc_counts[col_name + '_counts'])
+  color_mapper = LinearColorMapper(palette = palette, low = 0, high = max_val)
+  map_plot.patches('xs', 'ys', source = geosource, fill_color = {'field': col_name + '_counts', 'transform': color_mapper},
+                                   line_color='black', line_width=0.5, fill_alpha=0.5)
+  color_bar = ColorBar(color_mapper=color_mapper, label_standoff=8, height =20, border_line_color=None, location=(0, 0),
+                       orientation = 'horizontal')
+  map_plot.add_layout(color_bar, 'below')
 
   # Make a table of the numerical values that we can sort by
   dt_columns = [
-      TableColumn(field=col_name, title='title'),
+      TableColumn(field=col_name, title=col_name),
       TableColumn(field=col_name + '_percent',
-                  title='percent ' + col_name),
-      TableColumn(field=col_name + '_counts', title='count ' + col_name)
+                  title='Percentage of users in ' + col_name),
+      TableColumn(field=col_name + '_counts', title='Number of Users in ' + col_name)
   ]
   data_table = DataTable(source=geosource, columns=dt_columns)
   data_table.selectable = False
