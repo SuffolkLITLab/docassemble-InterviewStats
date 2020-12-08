@@ -1,7 +1,7 @@
 ---
 metadata:
-  title: Interview Statitsics
-  short title: stats
+  title: Administrative interview
+  short title: Admin
   temporary session: True
   required privileges:
     - admin
@@ -25,8 +25,12 @@ code: |
   filename
   formatted_data
   saved_data
+  view_data
 ---
 code: |
+  log('Logging stats, when outputting')
+  for stat in stats:
+    log(stat)
   proper_name = space_to_underscore(filename) + "_stats"
   xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
@@ -36,10 +40,15 @@ code: |
   writer.save()
   xlsx_output.commit()  
   del writer
-  geo_layout = make_usage_map(formatted_data)
+  saved_data = True
+---
+code: |
+  if defined('filter_list'):
+    geo_layout = make_usage_map(formatted_data, 'zip', filter_list)
+  else:
+    geo_layout = make_usage_map(formatted_data)
   map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
   del geo_layout
-  saved_data = True
 ---
 question: |
   What interview do you want to view statistics for?  
@@ -59,6 +68,9 @@ code: |
     stats = get_stats(filename)
   else:
     stats = get_stats(filename.replace(':',':data/questions/'))
+  log('Logging stats')
+  for stat in stats:
+    log(stat)
 ---
 need: stats
 code: |
@@ -66,21 +78,28 @@ code: |
     first_row = next(iter(stats))
     if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
       columns = list(first_row[1].keys())
-  except:
+    states = set([row[1]['state'] for row in stats])
+  except Exception as ex:
+    log('Columns will be blank because of :')
+    log(type(ex))
+    log(ex.args)
+    log(ex)
     columns = ['']
-  states = set(stats['State'])
+    states = ['']
 ---
 code: |
-  # import numpy as np
+  import operator
   import pandas as pd
 ---
 code: |
   for stat in stats:
     stat[1]['Modtime'] = stat[0]
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
+  log('Logging formatted_data')
+  log(formatted_data)
 ---
 mandatory: True
-id: view_data
+event: view_data
 question: |
   Total number of results for ${interview_title}: ${ len(stats) }
 subquestion: |
@@ -91,10 +110,12 @@ subquestion: |
   % endfor
   Filter by:
   % for state in states:
-  [${state}](${ url_action('filter_data', filter_state state) })
+  [${state}](${ url_action('filter_data', filter_state = state) })
   % endfor
   
   [:file-excel: Download](${ xlsx_output.url_for() })
+
+  ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
 
   ${ map_div }
   % endif
@@ -124,11 +145,10 @@ buttons:
   - Restart: restart  
 ---
 event: filter_data
-question: |
-  Total number of results: ${ len(stats) }
-subquestion: |
-  Filter by:
-  % for state in states:
-  [${state}](${ url_action('filter_data', filter_state state) })
-  % endfor
+code: |
+  import operator
+  arg = action_argument('filter_state')
+  filter_list = ['state', operator.eq, arg]
+  reconsider('map_div', 'map_script')
+  
   

@@ -10,6 +10,7 @@ def get_stats(filename):
   cur.execute(query, {'filename': filename})
   records = list()
   for record in cur.fetchall():
+    print(record)
     records.append(record)
   conn.close()
   return records
