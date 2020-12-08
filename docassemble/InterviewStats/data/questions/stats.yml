@@ -1,7 +1,7 @@
 ---
 metadata:
-  title: Administrative interview
-  short title: Admin
+  title: All Interview Statistics
+  short title: view stats
   temporary session: True
   required privileges:
     - admin
@@ -25,7 +25,6 @@ code: |
   filename
   formatted_data
   saved_data
-  view_data
 ---
 code: |
   log('Logging stats, when outputting')
@@ -42,6 +41,8 @@ code: |
   del writer
   saved_data = True
 ---
+depends on:
+  - filter_list
 code: |
   if defined('filter_list'):
     geo_layout = make_usage_map(formatted_data, 'zip', filter_list)
@@ -99,10 +100,11 @@ code: |
   log(formatted_data)
 ---
 mandatory: True
-event: view_data
+id: view_data
 question: |
   Total number of results for ${interview_title}: ${ len(stats) }
 subquestion: |
+  # TODO(brycew): reformat this Q: show screen with filters first (pre-poped), then show this. Allow user to go back and edit filters
   % if len(stats):
   Group by: 
   % for col in columns:
@@ -119,10 +121,11 @@ subquestion: |
 
   ${ map_div }
   % endif
+fields:
+  - "State to filter on": state_to_filter
+  - "Operator to use": chosen_op
 script: |
     ${ map_script}
-buttons:
-  - Restart: restart
 ---
 event: show_grouped_data
 question: |
@@ -148,7 +151,10 @@ event: filter_data
 code: |
   import operator
   arg = action_argument('filter_state')
-  filter_list = ['state', operator.eq, arg]
-  reconsider('map_div', 'map_script')
-  
-  
+  op = action_argument('chosen_op')
+  if op == 'eq':
+    filter_list = [('state', operator.eq, arg)]
+  elif op == 'ne':
+    filter_list = [('state', operator.ne, arg)]
+  else:
+    filter_list = [('state', lambda x,y: False, arg)]

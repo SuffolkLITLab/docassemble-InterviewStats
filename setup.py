@@ -45,7 +45,7 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
 setup(name='docassemble.InterviewStats',
       version='0.0.7',
       description=('A docassemble extension, to view stats from other interviews'),
-      long_description='# docassemble.InterviewStats\r\n\r\nA docassemble extension.\r\n\r\n## Author\r\n\r\nSystem Administrator, admin@admin.com\r\n\r\n',
+      long_description='# docassemble.InterviewStats\r\n\r\nA docassemble extension.\r\n\r\n## Author\r\n\r\nQuinten Steenhuis\r\nBryce Willey\r\n\r\n',
       long_description_content_type='text/markdown',
       author='Bryce Willey, Quinten Steenhuis',
       author_email='bwilley@suffolk.com',

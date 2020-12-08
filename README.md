@@ -4,5 +4,6 @@ A docassemble extension.
 
 ## Author
 
-System Administrator, admin@admin.com
+Quinten Steenhuis
+Bryce Willey
 
