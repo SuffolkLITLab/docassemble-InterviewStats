@@ -150,8 +150,9 @@ buttons:
 event: filter_data
 code: |
   import operator
-  arg = action_argument('filter_state')
-  op = action_argument('chosen_op')
+  action_dict = action_arguments()
+  arg = action_dict['filter_state']
+  op = action_dict.pop('chosen_op', 'eq')
   if op == 'eq':
     filter_list = [('state', operator.eq, arg)]
   elif op == 'ne':
