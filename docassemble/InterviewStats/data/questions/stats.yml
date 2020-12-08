@@ -77,7 +77,6 @@ code: |
   for stat in stats:
     stat[1]['Modtime'] = stat[0]
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
-  geo_data = make_heatmap(formatted_data)
 ---
 mandatory: True
 id: view_data

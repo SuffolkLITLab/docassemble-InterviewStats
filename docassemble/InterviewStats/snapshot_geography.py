@@ -11,18 +11,38 @@ from shapely import wkt
 import pandas as pd
 import numpy as np
 import geopandas as gpd
+import operator
 
 import sys
 import cenpy
 
 __all__ = ['make_usage_map', 'write_standalone_usage_map', 'get_embedable_usage_map']
 
-def make_usage_map(loc_df, col_name='zip'):
+def get_filter_types(col_name):
+  #TODO(brycew): is there a better way than hardcoding to columns?
+  standard_name = col_name.lower()
+  if standard_name == 'zip' or standard_name == 'state':
+    return [('equals', operator.eq), 
+            ('not equals', operator.ne)]
+  elif standard_name == 'modtime':
+    return [('less than', operator.lt),
+            ('less than or equal to', operator.le),
+            ('greater than', operator.gt),
+            ('greater than or equal to', operator.ge)]
+  else:
+    return []
+
+def make_usage_map(loc_df, col_name='zip', filters=[]):
   """Returns a bokeh layout, with a choropleth map of locations we've received
      Expects the dataframe to contain rows with a `col_name` column
+     to_filters: should be an iterable, each element containing:
+        * [0] is the name of the column to filter on, [1] is an operator to preform, and [2] is the name of the value to compare to
   """
   to_rm = loc_df[col_name].str.len() == 0
   loc_df = loc_df.drop(to_rm.index[to_rm])
+  for it_filter in filters:
+    to_rm = ~it_filter[1](loc_df[it_filter[0]], it_filter[2])
+    loc_df = loc_df.drop(to_rm.index[to_rm])
   loc_df[col_name + '_counts'] = 1
   loc_df = loc_df.groupby(col_name).sum().reset_index(level=0)
   loc_df[col_name + '_percent'] = loc_df[col_name + '_counts'] / loc_df[col_name + '_counts'].sum()
@@ -45,7 +65,7 @@ def make_usage_map(loc_df, col_name='zip'):
   geosource = GeoJSONDataSource(geojson=geo_loc_counts.to_json())
 
   # Just a normal map
-  TOOLTIPS = [('Zip', '@zip'), ('Number of users', '@{name}'.format(name=col_name + '_counts') + '{0.000}')]
+  TOOLTIPS = [(col_name, '@{}'.format(col_name)), ('Number of users', '@{}'.format(col_name + '_counts') + '{0}')]
   map_plot = figure(title='Usage map over ' + col_name, tooltips=TOOLTIPS)
   map_plot.sizing_mode = 'stretch_width'
   map_plot.toolbar.active_scroll = map_plot.select_one(WheelZoomTool)
@@ -105,7 +125,7 @@ def main(argv):
   if len(argv) > 3:
     print('Need <input csv> <output_html>')
   loc_df = pd.read_csv(argv[1], dtype='str')
-  layout = make_usage_map(loc_df, 'zip')
+  layout = make_usage_map(loc_df, 'zip', [('state', operator.eq, 'MA')])
   write_standalone_usage_map(layout, argv[2])
 
 if __name__ == '__main__':
