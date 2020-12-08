@@ -6,6 +6,12 @@ metadata:
   required privileges:
     - admin
 ---
+features:
+  javascript:
+    - https://cdn.bokeh.org/bokeh/release/bokeh-2.2.3.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.2.3.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.2.3.min.js
+---
 modules:
   - .snapshot_statistics
   - .snapshot_geography
@@ -20,7 +26,6 @@ code: |
   filename
   formatted_data
   saved_data
-  view_data
 ---
 code: |
   proper_name = space_to_underscore(filename) + "_stats"
@@ -33,7 +38,8 @@ code: |
   xlsx_output.commit()  
   del writer
   html_output.initialize(filename = proper_name + ".html")
-  write_heatmap_file(formatted_data, html_output.path()) 
+  geo_layout = make_usage_map(formatted_data)
+  write_standalone_usage_map(geo_layout, html_output.path()) 
   html_output.commit()
   saved_data = True
 ---
@@ -75,7 +81,8 @@ code: |
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
   geo_data = make_heatmap(formatted_data)
 ---
-event: view_data
+mandatory: True
+id: view_data
 question: |
   Total number of results for ${interview_title}: ${ len(stats) }
 subquestion: |
@@ -90,8 +97,12 @@ subquestion: |
   [:file-excel: Download](${ xlsx_output.url_for() })
   [View map](${ html_output.url_for() })
   % endif
-buttons:
-  - Restart: restart
+script: |
+    ${ map_script}
+    ${ map_inline}
+fields:
+  - html: |
+      ${ map_div }
 ---
 event: show_grouped_data
 question: |

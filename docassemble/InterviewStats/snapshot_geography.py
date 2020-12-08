@@ -15,7 +15,7 @@ import geopandas as gpd
 import sys
 import cenpy
 
-__all__ = ['make_usage_map', 'write_standalone_usage_map']
+__all__ = ['make_usage_map', 'write_standalone_usage_map', 'get_embedable_usage_map']
 
 def make_usage_map(loc_df, col_name='zip'):
   """Returns a bokeh layout, with a choropleth map of locations we've received
@@ -80,10 +80,9 @@ def make_usage_map(loc_df, col_name='zip'):
   data_table.reorderable = True
   data_table.sortable = True
 
-  layout = row(map_plot, data_table)
+  layout = column(map_plot, data_table)
   return layout
-  #TODO(brycew): continue here, make the bokeh map, figure out how to display the html in-page?
-  # Alternatives: d3 to be fancier
+  # TODO(brycew): Alternatives: d3 to be fancier
 
 def get_embedable_usage_map(layout):
   script, div = components(layout)
