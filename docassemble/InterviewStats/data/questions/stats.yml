@@ -68,6 +68,7 @@ code: |
       columns = list(first_row[1].keys())
   except:
     columns = ['']
+  states = set(stats['State'])
 ---
 code: |
   # import numpy as np
@@ -87,6 +88,10 @@ subquestion: |
   Group by: 
   % for col in columns:
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
+  % endfor
+  Filter by:
+  % for state in states:
+  [${state}](${ url_action('filter_data', filter_state state) })
   % endfor
   
   [:file-excel: Download](${ xlsx_output.url_for() })
@@ -117,3 +122,13 @@ script: |
 
 buttons:
   - Restart: restart  
+---
+event: filter_data
+question: |
+  Total number of results: ${ len(stats) }
+subquestion: |
+  Filter by:
+  % for state in states:
+  [${state}](${ url_action('filter_data', filter_state state) })
+  % endfor
+  
