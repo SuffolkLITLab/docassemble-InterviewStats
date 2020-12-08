@@ -1,7 +1,7 @@
 ---
 metadata:
-  title: Administrative interview
-  short title: Admin
+  title: Interview Statitsics
+  short title: stats
   temporary session: True
   required privileges:
     - admin
@@ -18,7 +18,6 @@ modules:
 ---
 objects:
   - xlsx_output: DAFile.using(filename="stats.xlsx")
-  - html_output: DAFile.using(filename="stats.html")
 ---
 id: interview order
 mandatory: True
@@ -37,10 +36,9 @@ code: |
   writer.save()
   xlsx_output.commit()  
   del writer
-  html_output.initialize(filename = proper_name + ".html")
   geo_layout = make_usage_map(formatted_data)
-  write_standalone_usage_map(geo_layout, html_output.path()) 
-  html_output.commit()
+  map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
+  del geo_layout
   saved_data = True
 ---
 question: |
@@ -92,17 +90,14 @@ subquestion: |
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
   % endfor
   
-  ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
-  
   [:file-excel: Download](${ xlsx_output.url_for() })
-  [View map](${ html_output.url_for() })
+
+  ${ map_div }
   % endif
 script: |
     ${ map_script}
-    ${ map_inline}
-fields:
-  - html: |
-      ${ map_div }
+buttons:
+  - Restart: restart
 ---
 event: show_grouped_data
 question: |
@@ -116,6 +111,10 @@ subquestion: |
   ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
   
   [:file-excel: Download](${ xlsx_output.url_for() })
-  [View map](${ html_output.url_for() })
+
+  ${ map_div }
+script: |
+  ${ map_script }
+
 buttons:
   - Restart: restart  
