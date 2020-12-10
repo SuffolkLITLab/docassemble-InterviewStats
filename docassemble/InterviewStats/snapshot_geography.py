@@ -1,6 +1,7 @@
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, WheelZoomTool, Dropdown,\
-                         Paragraph, DataTable, ColumnDataSource, TableColumn, LinearScale
+                         Paragraph, DataTable, ColumnDataSource, TableColumn, LinearScale, PanTool,\
+                         SaveTool
 from bokeh.tile_providers import Vendors, get_provider
 from bokeh.resources import CDN
 from bokeh.palettes import brewer
@@ -66,9 +67,11 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
 
   # Just a normal map
   TOOLTIPS = [(col_name, '@{}'.format(col_name)), ('Number of users', '@{}'.format(col_name + '_counts') + '{0}')]
-  map_plot = figure(title='Usage map over ' + col_name, tooltips=TOOLTIPS)
+  zoom_tool = WheelZoomTool(zoom_on_axis=False)
+  tools = [PanTool(),zoom_tool,SaveTool()] 
+  map_plot = figure(title='Usage map over ' + col_name, tooltips=TOOLTIPS, tools=tools)
   map_plot.sizing_mode = 'stretch_width'
-  map_plot.toolbar.active_scroll = map_plot.select_one(WheelZoomTool)
+  map_plot.toolbar.active_scroll = zoom_tool
 
   # https://docs.bokeh.org/en/latest/docs/user_guide/geo.html?highlight=geo
   # https://docs.bokeh.org/en/latest/docs/reference/tile_providers.html#bokeh-tile-providers

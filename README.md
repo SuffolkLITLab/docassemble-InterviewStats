@@ -1,6 +1,6 @@
 # docassemble.InterviewStats
 
-A docassemble extension.
+A docassemble interview that lets you view statistics from other saved interview responses. 
 
 ## Author
 

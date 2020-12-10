@@ -25,6 +25,7 @@ code: |
   filename
   formatted_data
   saved_data
+  viewed_filtered
 ---
 code: |
   log('Logging stats, when outputting')
@@ -41,13 +42,8 @@ code: |
   del writer
   saved_data = True
 ---
-depends on:
-  - filter_list
 code: |
-  if defined('filter_list'):
-    geo_layout = make_usage_map(formatted_data, 'zip', filter_list)
-  else:
-    geo_layout = make_usage_map(formatted_data)
+  geo_layout = make_usage_map(formatted_data)
   map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
   del geo_layout
 ---
@@ -69,9 +65,6 @@ code: |
     stats = get_stats(filename)
   else:
     stats = get_stats(filename.replace(':',':data/questions/'))
-  log('Logging stats')
-  for stat in stats:
-    log(stat)
 ---
 need: stats
 code: |
@@ -79,14 +72,13 @@ code: |
     first_row = next(iter(stats))
     if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
       columns = list(first_row[1].keys())
-    states = set([row[1]['state'] for row in stats])
+    state_list = set([row[1]['state'] for row in stats])
   except Exception as ex:
     log('Columns will be blank because of :')
-    log(type(ex))
     log(ex.args)
     log(ex)
     columns = ['']
-    states = ['']
+    state_list = ['']
 ---
 code: |
   import operator
@@ -96,36 +88,52 @@ code: |
   for stat in stats:
     stat[1]['Modtime'] = stat[0]
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
-  log('Logging formatted_data')
-  log(formatted_data)
 ---
 mandatory: True
 id: view_data
 question: |
   Total number of results for ${interview_title}: ${ len(stats) }
 subquestion: |
-  # TODO(brycew): reformat this Q: show screen with filters first (pre-poped), then show this. Allow user to go back and edit filters
   % if len(stats):
   Group by: 
   % for col in columns:
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
   % endfor
-  Filter by:
-  % for state in states:
-  [${state}](${ url_action('filter_data', filter_state = state) })
-  % endfor
   
   [:file-excel: Download](${ xlsx_output.url_for() })
-
-  ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
-
-  ${ map_div }
   % endif
+under: |
+  ${ map_div }
 fields:
-  - "State to filter on": state_to_filter
-  - "Operator to use": chosen_op
+  - State to filter on: state_to_filter
+    datatype: dropdown
+    code: |
+      state_list
+  - Operator to use: chosen_op
+    datatype: dropdown
+    code: |
+      [{'eq': "Equals"},
+       {'ne': "Not Equals"},
+       {'any': "(don't filter)"}]
 script: |
     ${ map_script}
+continue button field: start_filter
+---
+mandatory: True
+depends on: filt_map_script, filt_map_div
+need: filt_map_script, filt_map_div
+id: view_filtered_data
+question: |
+  Filtering: ${ chosen_op } ${ state_to_filter }
+subquestion: |
+  [:file-excel: Download](${ xlsx_output.url_for() })
+under: |
+  ${ filt_map_div }
+script: |
+    ${ filt_map_script }
+continue button field: viewed_filtered
+continue button label: Finish stats
+back button: True
 ---
 event: show_grouped_data
 question: |
@@ -143,19 +151,20 @@ subquestion: |
   ${ map_div }
 script: |
   ${ map_script }
-
 buttons:
   - Restart: restart  
 ---
-event: filter_data
+need: start_filter
+depends on: chosen_op, state_to_filter
 code: |
   import operator
-  action_dict = action_arguments()
-  arg = action_dict['filter_state']
-  op = action_dict.pop('chosen_op', 'eq')
-  if op == 'eq':
-    filter_list = [('state', operator.eq, arg)]
-  elif op == 'ne':
-    filter_list = [('state', operator.ne, arg)]
+  if chosen_op == 'eq':
+    op = operator.eq
+  elif chosen_op == 'ne':
+    op = operator.ne
   else:
-    filter_list = [('state', lambda x,y: False, arg)]
+    op = lambda x, y: operator.and_(x, np.full(x.dim, True))
+  filter_list = [('state', op, state_to_filter)]
+  filt_geo_layout = make_usage_map(formatted_data, 'zip', filter_list)
+  filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
+  del filt_geo_layout
