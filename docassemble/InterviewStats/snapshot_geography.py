@@ -1,7 +1,7 @@
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, WheelZoomTool, Dropdown,\
                          Paragraph, DataTable, ColumnDataSource, TableColumn, LinearScale, PanTool,\
-                         SaveTool
+                         SaveTool, HoverTool
 from bokeh.tile_providers import Vendors, get_provider
 from bokeh.resources import CDN
 from bokeh.palettes import brewer
@@ -51,14 +51,10 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
 
   by_time = loc_df.set_index('Modtime')
   main_series = [x.timestamp() for x in by_time.index]
-  start_timestamp = min(main_series)
-  end_timestamp = max(main_series)
-
-  all_groups = loc_df.groupby(col_name, dropna=True)
   all_series = {}
   for unit in set(by_time[col_name]):
     # Get only the submissions in the current geo unit, and then turn them into timestamps
-    all_series[unit] = [(x.timestamp() - start_timestamp) / (end_timestamp - start_timestamp) for x in by_time[(by_time[col_name] == unit)].index]
+    all_series[unit] = [x.timestamp() for x in by_time[(by_time[col_name] == unit)].index]
 
   loc_df = loc_df.groupby(col_name).agg({col_name + '_counts': 'sum',
                                          'state': 'first',
@@ -70,7 +66,6 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
     # Layer 8 should be the ZIP Code Tabulation Areas
     all_zip_codes = loc_df['zip'].to_list()
     full_where = ' or '.join(['ZCTA5={}'.format(x) for x in all_zip_codes])
-    print(full_where)
     all_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where)
     geo_loc_counts = all_zip_shapes.merge(loc_df, left_on='BASENAME', right_on='zip').drop(columns='Modtime')
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857') # required for tile mapping
@@ -86,7 +81,7 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
   TOOLTIPS = [(col_name, '@{}'.format(col_name)), ('Number of users', '@{}'.format(col_name + '_counts') + '{0}')]
   zoom_tool = WheelZoomTool(zoom_on_axis=False)
   tools = [PanTool(),zoom_tool,SaveTool()] 
-  map_plot = figure(title='Usage map over ' + col_name, tooltips=TOOLTIPS, tools=tools)
+  map_plot = figure(title='Submissions by ' + col_name, x_axis_type='mercator', y_axis_type='mercator', tooltips=TOOLTIPS, tools=tools)
   map_plot.sizing_mode = 'stretch_width'
   map_plot.toolbar.active_scroll = zoom_tool
 
@@ -106,29 +101,21 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
                        orientation = 'horizontal')
   map_plot.add_layout(color_bar, 'below')
 
-  pdf_x = np.linspace(0, 1, 300)
-  ridge_source = ColumnDataSource(data=dict(x=pdf_x)) 
-  ridge_plots = figure(y_range=list(all_series.keys()), toolbar_location=None)
-  ridge_plots.sizing_mode = 'stretch_width'
-  palette = [cc.rainbow[i] for i in np.linspace(0, len(cc.rainbow) - 1, len(all_series), dtype=int)]
-  for i, unit in enumerate(all_series):
-    # KDE plots
-    print(unit)
-    print(all_series[unit])
-    if len(all_series[unit]) == 1:
-      all_series[unit] = all_series[unit] * 2
-      all_series[unit][1] -= 0.001
-    pdf_series = gaussian_kde(all_series[unit])
-    pdf_y = pdf_series(pdf_x)
-    print(pdf_y)
-    scale = 1 # 0.1 * len(all_series[unit])
-    y = list(zip([unit] * len(pdf_y), scale * pdf_y))
-    ridge_source.add(y, unit)
-    ridge_plots.patch('x', unit, color=palette[i], line_color='black', alpha=0.6, source=ridge_source)
-    # Alternate histogram plots
-    #hist, edges = np.histogram(all_series[unit], density=False, bins=len(all_series[unit]))
-    #ridge_plots.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color='navy', line_color="white", alpha=0.5)
   
+  ridge_plots = figure(title='When did users submit?', x_axis_label='Date', y_axis_label='Count', x_axis_type='datetime', toolbar_location=None)
+  ridge_plots.sizing_mode = 'stretch_width'
+  ridge_plots.toolbar.active_drag = None
+  ridge_plots.toolbar.active_scroll= None
+
+  hist, edges = np.histogram(main_series, density=False, bins = 50)
+  hist_df = pd.DataFrame({'amount': hist, 'left': pd.to_datetime(edges[:-1], unit='s'), 'right': pd.to_datetime(edges[1:], unit='s')})
+  date_fmt_str = "%b %d, %y, %r"
+  hist_df['interval'] = ["{} to {}".format(left.strftime(date_fmt_str), right.strftime(date_fmt_str)) for left, right in zip(hist_df["left"], hist_df["right"])]
+  ridge_source = ColumnDataSource(hist_df)
+  ridge_plots.quad(top='amount', bottom=0, left='left', right='right', fill_color='orange', line_color='black', alpha=0.8, source=ridge_source)
+  hover = HoverTool(tooltips = [('Interval', '@interval'), ('Count', '@amount')])
+  ridge_plots.add_tools(hover)
+
   # Make a table of the numerical values that we can sort by
   dt_columns = [
       TableColumn(field=col_name, title=col_name),
@@ -143,7 +130,7 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
   data_table.reorderable = True
   data_table.sortable = True
 
-  layout = column(map_plot, data_table, ridge_plots)
+  layout = column(map_plot, ridge_plots, data_table)
   return layout
   # TODO(brycew): Alternatives: d3 to be fancier
 
