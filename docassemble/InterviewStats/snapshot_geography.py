@@ -9,7 +9,6 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
 from scipy.stats.kde import gaussian_kde
 from shapely import wkt
-import colorcet as cc
 
 import pandas as pd
 import numpy as np
