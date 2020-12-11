@@ -7,7 +7,9 @@ from bokeh.resources import CDN
 from bokeh.palettes import brewer
 from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
+from scipy.stats.kde import gaussian_kde
 from shapely import wkt
+import colorcet as cc
 
 import pandas as pd
 import numpy as np
@@ -45,7 +47,22 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
     to_rm = ~it_filter[1](loc_df[it_filter[0]], it_filter[2])
     loc_df = loc_df.drop(to_rm.index[to_rm])
   loc_df[col_name + '_counts'] = 1
-  loc_df = loc_df.groupby(col_name).sum().reset_index(level=0)
+  loc_df['Modtime'] = pd.to_datetime(loc_df['Modtime'])
+
+  by_time = loc_df.set_index('Modtime')
+  main_series = [x.timestamp() for x in by_time.index]
+  start_timestamp = min(main_series)
+  end_timestamp = max(main_series)
+
+  all_groups = loc_df.groupby(col_name, dropna=True)
+  all_series = {}
+  for unit in set(by_time[col_name]):
+    # Get only the submissions in the current geo unit, and then turn them into timestamps
+    all_series[unit] = [(x.timestamp() - start_timestamp) / (end_timestamp - start_timestamp) for x in by_time[(by_time[col_name] == unit)].index]
+
+  loc_df = loc_df.groupby(col_name).agg({col_name + '_counts': 'sum',
+                                         'state': 'first',
+                                         'Modtime': 'max'}).reset_index(level=0)
   loc_df[col_name + '_percent'] = loc_df[col_name + '_counts'] / loc_df[col_name + '_counts'].sum()
   if col_name.lower() == 'zip':
     api_conn = cenpy.remote.APIConnection('DECENNIALSF12010') # short code for census product (TODO(brycew): how to find other short codes?)
@@ -55,7 +72,7 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
     full_where = ' or '.join(['ZCTA5={}'.format(x) for x in all_zip_codes])
     print(full_where)
     all_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where)
-    geo_loc_counts = all_zip_shapes.merge(loc_df, left_on='BASENAME', right_on='zip')
+    geo_loc_counts = all_zip_shapes.merge(loc_df, left_on='BASENAME', right_on='zip').drop(columns='Modtime')
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857') # required for tile mapping
   else:
     # If not doing zip codes, you can use the State code to filter things down.
@@ -89,6 +106,29 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
                        orientation = 'horizontal')
   map_plot.add_layout(color_bar, 'below')
 
+  pdf_x = np.linspace(0, 1, 300)
+  ridge_source = ColumnDataSource(data=dict(x=pdf_x)) 
+  ridge_plots = figure(y_range=list(all_series.keys()), toolbar_location=None)
+  ridge_plots.sizing_mode = 'stretch_width'
+  palette = [cc.rainbow[i] for i in np.linspace(0, len(cc.rainbow) - 1, len(all_series), dtype=int)]
+  for i, unit in enumerate(all_series):
+    # KDE plots
+    print(unit)
+    print(all_series[unit])
+    if len(all_series[unit]) == 1:
+      all_series[unit] = all_series[unit] * 2
+      all_series[unit][1] -= 0.001
+    pdf_series = gaussian_kde(all_series[unit])
+    pdf_y = pdf_series(pdf_x)
+    print(pdf_y)
+    scale = 1 # 0.1 * len(all_series[unit])
+    y = list(zip([unit] * len(pdf_y), scale * pdf_y))
+    ridge_source.add(y, unit)
+    ridge_plots.patch('x', unit, color=palette[i], line_color='black', alpha=0.6, source=ridge_source)
+    # Alternate histogram plots
+    #hist, edges = np.histogram(all_series[unit], density=False, bins=len(all_series[unit]))
+    #ridge_plots.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color='navy', line_color="white", alpha=0.5)
+  
   # Make a table of the numerical values that we can sort by
   dt_columns = [
       TableColumn(field=col_name, title=col_name),
@@ -103,7 +143,7 @@ def make_usage_map(loc_df, col_name='zip', filters=[]):
   data_table.reorderable = True
   data_table.sortable = True
 
-  layout = column(map_plot, data_table)
+  layout = column(map_plot, data_table, ridge_plots)
   return layout
   # TODO(brycew): Alternatives: d3 to be fancier
 
@@ -125,8 +165,9 @@ def write_standalone_usage_map(layout, output_file):
     f.write(html)
 
 def main(argv):
-  if len(argv) > 3:
+  if len(argv) < 3:
     print('Need <input csv> <output_html>')
+    return
   loc_df = pd.read_csv(argv[1], dtype='str')
   layout = make_usage_map(loc_df, 'zip', [('state', operator.eq, 'MA')])
   write_standalone_usage_map(layout, argv[2])
