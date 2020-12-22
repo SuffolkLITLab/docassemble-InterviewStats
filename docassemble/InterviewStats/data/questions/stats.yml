@@ -86,18 +86,20 @@ code: |
 ---
 code: |
   for stat in stats:
-    stat[1]['Modtime'] = stat[0]
+    stat[1]['modtime'] = stat[0]
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
 ---
 mandatory: True
 id: view_data
 question: |
-  Total number of results for ${interview_title}: ${ len(stats) }
+  Stats for ${interview_title}: ${ len(stats) }
 subquestion: |
+  Total submissions: ${ len(stats) }
+  
   % if len(stats):
   Group by: 
   % for col in columns:
-  [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
+  [${col}](${ url_action('show_grouped_data', group_by = col ) }) | 
   % endfor
   
   [:file-excel: Download](${ xlsx_output.url_for() })
@@ -105,28 +107,42 @@ subquestion: |
 under: |
   ${ map_div }
 fields:
-  - State to filter on: state_to_filter
+  - Filter State: filter_state
+    datatype: yesno
+  - Find States that: state_op
     datatype: dropdown
+    show if: filter_state
+    code: |
+      [{'eq': "equal"},
+       {'ne': "don't equal"}]
+  - this state: state_to_filter
+    datatype: dropdown
+    show if: filter_state
     code: |
       state_list
-  - Operator to use: chosen_op
+  - Filter by Date: filter_date
+    datatype: yesno
+  - Find submissions that are: date_op
     datatype: dropdown
+    show if: filter_date
     code: |
-      [{'eq': "Equals"},
-       {'ne': "Not Equals"},
-       {'any': "(don't filter)"}]
+      [{'gt': 'after'},
+       {'lt': 'before'},
+       {'eq': 'the same day as'}]
+  - this date: date_to_filter
+    datatype: date
+    show if: filter_date
 script: |
     ${ map_script}
 continue button field: start_filter
+continue button label: Filter
 ---
 mandatory: True
 depends on: filt_map_script, filt_map_div
 need: filt_map_script, filt_map_div
 id: view_filtered_data
 question: |
-  Filtering: ${ chosen_op } ${ state_to_filter }
-subquestion: |
-  [:file-excel: Download](${ xlsx_output.url_for() })
+  Filtered: ${ filter_description }
 under: |
   ${ filt_map_div }
 script: |
@@ -137,7 +153,7 @@ back button: True
 ---
 event: show_grouped_data
 question: |
-  Total number of results: ${ len(stats) }
+  Total submissions: ${ len(stats) }
 subquestion: |  
   Group by: 
   % for col in columns:
@@ -155,16 +171,22 @@ buttons:
   - Restart: restart  
 ---
 need: start_filter
-depends on: chosen_op, state_to_filter
+depends on: state_op, state_to_filter
 code: |
-  import operator
-  if chosen_op == 'eq':
-    op = operator.eq
-  elif chosen_op == 'ne':
-    op = operator.ne
-  else:
-    op = lambda x, y: operator.and_(x, np.full(x.dim, True))
-  filter_list = [('state', op, state_to_filter)]
-  filt_geo_layout = make_usage_map(formatted_data, 'zip', filter_list)
+  filter_list = []
+  readable = {'state': 'State', 'modtime': 'Date', 
+              'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
+  if filter_state:
+    filter_list.append(('state', state_op, state_to_filter))
+  if filter_date:
+    date_to_filter = date_to_filter.replace(tzinfo=None)
+    filter_list.append(('modtime', date_op, date_to_filter))
+    
+  filter_description = ' and '.join(
+      ['{} {} {}'.format(readable[elem[0]], readable[elem[1]], elem[2])
+       for elem in filter_list])
+  filters = get_filters_from_strings(filter_list) 
+  filt_geo_layout = make_usage_map(formatted_data, geo_col='zip',
+                                   time_col='modtime', filters=filters)
   filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
   del filt_geo_layout
