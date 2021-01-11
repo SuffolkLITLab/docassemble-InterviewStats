@@ -53,7 +53,7 @@ def get_filters_from_strings(filters):
 all_zip_shapes = gpd.GeoDataFrame()
 
 
-def grab_geography(agg_df):
+def grab_geography(agg_df, geo_col, time_col):
   global all_zip_shapes
   if geo_col.lower() == 'zip':
     agg_zip_codes = agg_df['zip']
@@ -76,7 +76,7 @@ def grab_geography(agg_df):
       log('Grabbed {} zips in {} seconds'.format(
           len(new_zip_shapes), end - start))
     geo_loc_counts = all_zip_shapes.merge(agg_df, how='right',
-                                          left_on='BASENAME', right_on='zip')
+                                          left_on='BASENAME', right_on='zip').drop(columns=[time_col])
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857')  # for tile mapping
     return geo_loc_counts
   else:
@@ -153,7 +153,6 @@ def make_bokeh_table(geosource, col_name='zip'):
   return data_table
 
 
-  
 def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
   """
   Returns a bokeh layout, with a choropleth map of locations we've received
@@ -163,8 +162,8 @@ def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
         * n operator to preform
         * the name of the value to compare to
   """
-  has_geo_col = geo_col in loc_df.columns()
-  has_time_col = time_col in loc_df.columns()
+  has_geo_col = geo_col in loc_df.columns
+  has_time_col = time_col in loc_df.columns
 
   outer_start = timeit.time.time()
   if has_geo_col:
@@ -184,8 +183,8 @@ def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
                                           time_col: 'max'}).reset_index(level=0)
     agg_df[geo_col + '_percent'] = agg_df[geo_col + '_counts'] / agg_df[geo_col + '_counts'].sum()
 
-    geo_loc_counts = grab_geography(agg_df)
-    if geo_loc_counts == None:
+    geo_loc_counts = grab_geography(agg_df, geo_col, time_col)
+    if geo_loc_counts is None:
       # Couldn't process the geography for some reason, act like you don't have any
       geosource = ColumnDataSource(agg_df)
     else:
@@ -196,14 +195,14 @@ def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
   start = timeit.time.time()
   all_components = []
   if has_geo_col:
-    all_components.append(map_plot = make_bokeh_map(geosource, geo_loc_counts, geo_col))
+    all_components.append(make_bokeh_map(geosource, geo_loc_counts, geo_col))
   if has_time_col: 
     all_components.append(make_bokeh_date_histogram([x.timestamp() for x in loc_df[time_col]]))
   if has_geo_col:
-    data_table = make_bokeh_table(geosource, geo_col)
+    all_components.append(make_bokeh_table(geosource, geo_col))
   end = timeit.time.time()
   log('Made plots in {} seconds'.format(end - start))
-  return column(map_plot, ridge_plots, data_table)
+  return column(all_components)
 
 
 def get_embedable_usage_map(layout):

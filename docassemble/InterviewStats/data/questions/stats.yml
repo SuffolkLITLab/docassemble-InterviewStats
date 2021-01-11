@@ -104,8 +104,9 @@ under: |
 fields:
   - Filter State: filter_state
     datatype: yesno
-    disable if: |
-      'state' not in formatted_data.columns()
+    disable if: 
+      code: |
+        'state' not in formatted_data.columns
   - Find States that: state_op
     datatype: dropdown
     show if: filter_state
@@ -119,8 +120,9 @@ fields:
       state_list
   - Filter by Date: filter_date
     datatype: yesno
-    disable if: |
-      'modtime' not in formatted_data.columns()
+    disable if: 
+      code: |
+        'modtime' not in formatted_data.columns
   - Find submissions that are: date_op
     datatype: dropdown
     show if: filter_date
