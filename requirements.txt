@@ -1,6 +1,7 @@
 attrs==20.3.0
 autopep8==1.5.4
 bokeh==2.2.3
+cenpy==1.0.0.post4
 certifi==2020.11.8
 chardet==3.0.4
 click==7.1.2

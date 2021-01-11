@@ -50,6 +50,42 @@ def get_filters_from_strings(filters):
   return [(filt[0], filt_map[filt[1]], filt[2]) for filt in filters] 
 
 
+all_zip_shapes = gpd.GeoDataFrame()
+
+
+def grab_geography(agg_df):
+  global all_zip_shapes
+  if geo_col.lower() == 'zip':
+    agg_zip_codes = agg_df['zip']
+    if all_zip_shapes.empty:
+      need_to_grab = list(agg_zip_codes)
+    else:
+      need_to_grab = list(
+          agg_zip_codes[~agg_zip_codes.isin(all_zip_shapes.BASENAME)])
+    if len(need_to_grab):
+      start = timeit.time.time()
+      api_conn = cenpy.remote.APIConnection(
+          'DECENNIALSF12010')  # short code for census product
+      # other map services are at `cenpy.tiger.available()` (should match above)
+      api_conn.set_mapservice('tigerWMS_Census2010')
+      full_where = ' or '.join(['ZCTA5={}'.format(x) for x in need_to_grab])
+      # Layer 8 should be the ZIP Code Tabulation Areas
+      new_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where)
+      all_zip_shapes = all_zip_shapes.append(new_zip_shapes)
+      end = timeit.time.time()
+      log('Grabbed {} zips in {} seconds'.format(
+          len(new_zip_shapes), end - start))
+    geo_loc_counts = all_zip_shapes.merge(agg_df, how='right',
+                                          left_on='BASENAME', right_on='zip')
+    geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857')  # for tile mapping
+    return geo_loc_counts
+  else:
+    # If not doing zip codes, you can use the State code to filter things down.
+    # fips = cenpy.explorer.fips_table('STATE').set_index('State Abbreviation').loc['MA']['FIPS Code']
+    print('ERROR: locations besides zips not supported right now')
+    return None
+
+
 def make_bokeh_map(geosource, geo_loc_counts, col_name='zip'):
   zoom_tool = WheelZoomTool(zoom_on_axis=False)
   tools = [PanTool(),zoom_tool,SaveTool()]
@@ -117,65 +153,54 @@ def make_bokeh_table(geosource, col_name='zip'):
   return data_table
 
 
-all_zip_shapes = gpd.GeoDataFrame()
-
   
 def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
   """
   Returns a bokeh layout, with a choropleth map of locations we've received
- Expects the dataframe to contain rows with a `geo_col` and `time_col` columns
-     to_filters: should be an iterable, each element containing:
+  Expects the dataframe to contain rows with a `geo_col` and `time_col` columns
+      to_filters: should be an iterable, each element containing:
         * the name of the column to filter on
         * n operator to preform
         * the name of the value to compare to
   """
-  global all_zip_shapes
+  has_geo_col = geo_col in loc_df.columns()
+  has_time_col = time_col in loc_df.columns()
+
   outer_start = timeit.time.time()
-  to_rm = loc_df[geo_col].str.len() == 0
-  loc_df = loc_df.drop(to_rm.index[to_rm])
+  if has_geo_col:
+    to_rm = loc_df[geo_col].str.len() == 0
+    loc_df = loc_df.drop(to_rm.index[to_rm])
+    loc_df[geo_col + '_counts'] = 1
+
   for it_filter in filters:
     to_rm = ~it_filter[1](loc_df[it_filter[0]], it_filter[2])
     loc_df = loc_df.drop(to_rm.index[to_rm])
-  loc_df[geo_col + '_counts'] = 1
-  loc_df[time_col] = pd.to_datetime(loc_df[time_col])
 
-  agg_df = loc_df.groupby(geo_col).agg({geo_col + '_counts': 'sum',
-                                        'state': 'first',
-                                        'modtime': 'max'}).reset_index(level=0)
-  agg_df[geo_col + '_percent'] = agg_df[geo_col + '_counts'] / agg_df[geo_col + '_counts'].sum()
-  if geo_col.lower() == 'zip':
-    agg_zip_codes = agg_df['zip']
-    if all_zip_shapes.empty:
-      need_to_grab = list(agg_zip_codes)
+  if has_time_col:
+    loc_df[time_col] = pd.to_datetime(loc_df[time_col])
+
+  if has_geo_col:
+    agg_df = loc_df.groupby(geo_col).agg({geo_col + '_counts': 'sum',
+                                          time_col: 'max'}).reset_index(level=0)
+    agg_df[geo_col + '_percent'] = agg_df[geo_col + '_counts'] / agg_df[geo_col + '_counts'].sum()
+
+    geo_loc_counts = grab_geography(agg_df)
+    if geo_loc_counts == None:
+      # Couldn't process the geography for some reason, act like you don't have any
+      geosource = ColumnDataSource(agg_df)
     else:
-      need_to_grab = list(agg_zip_codes[~agg_zip_codes.isin(all_zip_shapes.BASENAME)])
-    if len(need_to_grab):
-      start = timeit.time.time()
-      api_conn = cenpy.remote.APIConnection('DECENNIALSF12010') # short code for census product
-      # other map services are at `cenpy.tiger.available()` (should match above)
-      api_conn.set_mapservice('tigerWMS_Census2010') 
-      full_where = ' or '.join(['ZCTA5={}'.format(x) for x in need_to_grab])
-      # Layer 8 should be the ZIP Code Tabulation Areas
-      new_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where)
-      all_zip_shapes = all_zip_shapes.append(new_zip_shapes)
-      end = timeit.time.time()
-      log('Grabbed {} zips in {} seconds'.format(len(new_zip_shapes), end - start))
-    geo_loc_counts = all_zip_shapes.merge(agg_df, how='right',
-                                  left_on='BASENAME', right_on='zip').drop(columns='modtime')
-    geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857') # required for tile mapping
-  else:
-    # If not doing zip codes, you can use the State code to filter things down.
-    # fips = cenpy.explorer.fips_table('STATE').set_index('State Abbreviation').loc['MA']['FIPS Code']
-    print('ERROR: locations besides zips not supported right now')
-    return None
-  outer_end = timeit.time.time()
-  log('Processed zips in {} seconds'.format(outer_end - outer_start))
+      outer_end = timeit.time.time()
+      log('Processed {} in {} seconds'.format(geo_col, outer_end - outer_start))
+      geosource = GeoJSONDataSource(geojson=geo_loc_counts.to_json())
 
   start = timeit.time.time()
-  geosource = GeoJSONDataSource(geojson=geo_loc_counts.to_json())
-  map_plot = make_bokeh_map(geosource, geo_loc_counts, geo_col) 
-  ridge_plots = make_bokeh_date_histogram([x.timestamp() for x in loc_df[time_col]])
-  data_table = make_bokeh_table(geosource, geo_col)
+  all_components = []
+  if has_geo_col:
+    all_components.append(map_plot = make_bokeh_map(geosource, geo_loc_counts, geo_col))
+  if has_time_col: 
+    all_components.append(make_bokeh_date_histogram([x.timestamp() for x in loc_df[time_col]]))
+  if has_geo_col:
+    data_table = make_bokeh_table(geosource, geo_col)
   end = timeit.time.time()
   log('Made plots in {} seconds'.format(end - start))
   return column(map_plot, ridge_plots, data_table)
