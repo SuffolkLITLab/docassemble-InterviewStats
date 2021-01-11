@@ -28,9 +28,6 @@ code: |
   viewed_filtered
 ---
 code: |
-  log('Logging stats, when outputting')
-  for stat in stats:
-    log(stat)
   proper_name = space_to_underscore(filename) + "_stats"
   xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
@@ -74,9 +71,7 @@ code: |
       columns = list(first_row[1].keys())
     state_list = set([row[1]['state'] for row in stats])
   except Exception as ex:
-    log('Columns will be blank because of :')
-    log(ex.args)
-    log(ex)
+    log('Columns will be blank because of: {}, {}'.format(ex.args, ex))
     columns = ['']
     state_list = ['']
 ---

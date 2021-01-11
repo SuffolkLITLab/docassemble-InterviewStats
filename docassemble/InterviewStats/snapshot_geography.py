@@ -50,7 +50,6 @@ def get_filters_from_strings(filters):
   return [(filt[0], filt_map[filt[1]], filt[2]) for filt in filters] 
 
 
-
 def make_bokeh_map(geosource, geo_loc_counts, col_name='zip'):
   zoom_tool = WheelZoomTool(zoom_on_axis=False)
   tools = [PanTool(),zoom_tool,SaveTool()]
@@ -131,7 +130,6 @@ def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
         * the name of the value to compare to
   """
   global all_zip_shapes
-  log('Start zip shapes: {}'.format(len(all_zip_shapes)))
   outer_start = timeit.time.time()
   to_rm = loc_df[geo_col].str.len() == 0
   loc_df = loc_df.drop(to_rm.index[to_rm])
@@ -179,7 +177,7 @@ def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
   ridge_plots = make_bokeh_date_histogram([x.timestamp() for x in loc_df[time_col]])
   data_table = make_bokeh_table(geosource, geo_col)
   end = timeit.time.time()
-  log('Make plots in {} seconds'.format(end - start))
+  log('Made plots in {} seconds'.format(end - start))
   return column(map_plot, ridge_plots, data_table)
 
 
