@@ -1,13 +1,20 @@
 ---
 metadata:
-  title: Administrative interview
-  short title: Admin
+  title: All Interview Statistics
+  short title: view stats
   temporary session: True
   required privileges:
     - admin
 ---
+features:
+  javascript:
+    - https://cdn.bokeh.org/bokeh/release/bokeh-2.2.3.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.2.3.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.2.3.min.js
+---
 modules:
   - .snapshot_statistics
+  - .snapshot_geography
 ---
 objects:
   - xlsx_output: DAFile.using(filename="stats.xlsx")
@@ -18,10 +25,11 @@ code: |
   filename
   formatted_data
   saved_data
-  view_data
+  viewed_filtered
 ---
 code: |
-  xlsx_output.initialize(filename=space_to_underscore(filename) + "_stats.xlsx")
+  proper_name = space_to_underscore(filename) + "_stats"
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
     options={'remove_timezone': True})
@@ -30,6 +38,11 @@ code: |
   xlsx_output.commit()  
   del writer
   saved_data = True
+---
+code: |
+  geo_layout = make_usage_map(formatted_data)
+  map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
+  del geo_layout
 ---
 question: |
   What interview do you want to view statistics for?  
@@ -56,38 +69,92 @@ code: |
     first_row = next(iter(stats))
     if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
       columns = list(first_row[1].keys())
-  except:
+    state_list = set([row[1]['state'] for row in stats])
+  except Exception as ex:
+    log('Columns will be blank because of: {}, {}'.format(ex.args, ex))
     columns = ['']
+    state_list = ['']
 ---
 code: |
-  # import numpy as np
+  import operator
   import pandas as pd
 ---
 code: |
   for stat in stats:
-    stat[1]['Modtime'] = stat[0]
+    stat[1]['modtime'] = stat[0]
   formatted_data = pd.DataFrame([stat[1] for stat in stats])
 ---
-event: view_data
+mandatory: True
+id: view_data
 question: |
-  Total number of results for ${interview_title}: ${ len(stats) }
+  Stats for ${interview_title}: ${ len(stats) }
 subquestion: |
+  Total submissions: ${ len(stats) }
+  
   % if len(stats):
   Group by: 
   % for col in columns:
-  [${col}](${ url_action('show_grouped_data', group_by = col ) }) 
+  [${col}](${ url_action('show_grouped_data', group_by = col ) }) | 
   % endfor
-  
-  ${ formatted_data.to_html(classes=('table','table-striped'), index=False) }
   
   [:file-excel: Download](${ xlsx_output.url_for() })
   % endif
-buttons:
-  - Restart: restart
+under: |
+  ${ map_div }
+fields:
+  - Filter State: filter_state
+    datatype: yesno
+    disable if: 
+      code: |
+        'state' not in formatted_data.columns
+  - Find States that: state_op
+    datatype: dropdown
+    show if: filter_state
+    code: |
+      [{'eq': "equal"},
+       {'ne': "don't equal"}]
+  - this state: state_to_filter
+    datatype: dropdown
+    show if: filter_state
+    code: |
+      state_list
+  - Filter by Date: filter_date
+    datatype: yesno
+    disable if: 
+      code: |
+        'modtime' not in formatted_data.columns
+  - Find submissions that are: date_op
+    datatype: dropdown
+    show if: filter_date
+    code: |
+      [{'gt': 'after'},
+       {'lt': 'before'},
+       {'eq': 'the same day as'}]
+  - this date: date_to_filter
+    datatype: date
+    show if: filter_date
+script: |
+    ${ map_script}
+continue button field: start_filter
+continue button label: Filter
+---
+mandatory: True
+depends on: filt_map_script, filt_map_div
+need: filt_map_script, filt_map_div
+id: view_filtered_data
+question: |
+  Filtered: ${ filter_description }
+under: |
+  ${ filt_map_div }
+script: |
+    ${ filt_map_script }
+continue button field: viewed_filtered
+continue button label: Finish stats
+back button: True
 ---
 event: show_grouped_data
 question: |
-  Total number of results: ${ len(stats) }
+  Total submissions: ${ len(stats) }
 subquestion: |  
   Group by: 
   % for col in columns:
@@ -97,5 +164,30 @@ subquestion: |
   ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
   
   [:file-excel: Download](${ xlsx_output.url_for() })
+
+  ${ map_div }
+script: |
+  ${ map_script }
 buttons:
   - Restart: restart  
+---
+need: start_filter
+depends on: state_op, state_to_filter
+code: |
+  filter_list = []
+  readable = {'state': 'State', 'modtime': 'Date', 
+              'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
+  if filter_state:
+    filter_list.append(('state', state_op, state_to_filter))
+  if filter_date:
+    date_to_filter = date_to_filter.replace(tzinfo=None)
+    filter_list.append(('modtime', date_op, date_to_filter))
+    
+  filter_description = ' and '.join(
+      ['{} {} {}'.format(readable[elem[0]], readable[elem[1]], elem[2])
+       for elem in filter_list])
+  filters = get_filters_from_strings(filter_list) 
+  filt_geo_layout = make_usage_map(formatted_data, geo_col='zip',
+                                   time_col='modtime', filters=filters)
+  filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
+  del filt_geo_layout
