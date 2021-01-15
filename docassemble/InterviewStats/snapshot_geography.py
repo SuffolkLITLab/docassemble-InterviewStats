@@ -9,7 +9,7 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
 from scipy.stats.kde import gaussian_kde
 from shapely import wkt
-import cache_geography
+from . import cache_geography
 
 try:
   from docassemble.base.util import log
