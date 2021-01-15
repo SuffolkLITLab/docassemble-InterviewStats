@@ -9,8 +9,12 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
 from scipy.stats.kde import gaussian_kde
 from shapely import wkt
+import cache_geography
 
-from docassemble.base.util import log
+try:
+  from docassemble.base.util import log
+except:
+  log = print
 
 import pandas as pd
 import numpy as np
@@ -58,25 +62,14 @@ def grab_geography(agg_df, geo_col, time_col):
   if geo_col.lower() == 'zip':
     agg_zip_codes = agg_df['zip']
     if all_zip_shapes.empty:
-      need_to_grab = list(agg_zip_codes)
-    else:
-      need_to_grab = list(
-          agg_zip_codes[~agg_zip_codes.isin(all_zip_shapes.BASENAME)])
-    if len(need_to_grab):
       start = timeit.time.time()
-      api_conn = cenpy.remote.APIConnection(
-          'DECENNIALSF12010')  # short code for census product
-      # other map services are at `cenpy.tiger.available()` (should match above)
-      api_conn.set_mapservice('tigerWMS_Census2010')
-      full_where = ' or '.join(['ZCTA5={}'.format(x) for x in need_to_grab])
-      # Layer 8 should be the ZIP Code Tabulation Areas
-      new_zip_shapes = api_conn.mapservice.query(layer=8, where=full_where)
-      all_zip_shapes = all_zip_shapes.append(new_zip_shapes)
+      all_zip_shapes = cache_geography.get_zips()
       end = timeit.time.time()
       log('Grabbed {} zips in {} seconds'.format(
-          len(new_zip_shapes), end - start))
+          len(all_zip_shapes), end - start))
+    print(all_zip_shapes)
     geo_loc_counts = all_zip_shapes.merge(agg_df, how='right',
-                                          left_on='BASENAME', right_on='zip').drop(columns=[time_col])
+                                          left_on='GEOID10', right_on='zip').drop(columns=[time_col])
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857')  # for tile mapping
     return geo_loc_counts
   else:
@@ -229,7 +222,7 @@ def main(argv):
     print('Need <input csv> <output_html>')
     return
   loc_df = pd.read_csv(argv[1], dtype='str')
-  layout = make_usage_map(loc_df, 'zip', [('state', operator.eq, 'MA')])
+  layout = make_usage_map(loc_df, 'zip', 'modtime', [('state', operator.eq, 'MA')])
   write_standalone_usage_map(layout, argv[2])
 
 if __name__ == '__main__':
