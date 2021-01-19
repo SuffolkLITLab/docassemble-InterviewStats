@@ -6,9 +6,15 @@ import numpy as np
 import os
 from pathlib import Path
 
+try:
+  from docassemble.base.util import log
+except:
+  log = print
+
 
 def download_file(url, local_filename):
   # https://stackoverflow.com/a/16696317
+  log('Downloading {} to {}'.format(url, local_filename))
   with requests.get(url, stream=True) as r:
     r.raise_for_status()
     with open(local_filename, 'wb') as f:
@@ -29,7 +35,7 @@ base_url = 'https://www2.census.gov/geo/tiger/GENZ2019/shp/'
 
 def saved_dir():
   cdir = os.path.dirname(os.path.abspath(__file__))
-  return os.path.join(cdir, 'data/shapes')
+  return os.path.join(cdir, 'data/sources')
 
 
 def get_boundary_file(state_abbrev, layer_type, resolution='500k'):
@@ -50,8 +56,11 @@ def download_shapes(state_abbrev, layer_type, resolution='500k'):
 def get_zips():
   # Download the rough US state shapes: saves time later when loading from file
   full_file_path = os.path.join(saved_dir(), get_boundary_file('us', 'zcta510'))
+  log('Does {} exist?'.format(full_file_path))
   if not Path(full_file_path).exists():
-      download_shapes('us', 'zcta510')
+    for (dp, dn, fn) in os.walk('../../'):
+      log('{} {} {}'.format(dp, list(dn), list(fn)))
+    download_shapes('us', 'zcta510')
   # TODO(brycew): consider a bounding box: it's 2x as fast with one, but trying to read and grab
   # bounding boxes from a different shape file is slower
   return gpd.read_file('zip://' + full_file_path)
@@ -70,9 +79,4 @@ def get_zips():
     #         tuple(reduce(lambda l1, l2: np.maximum(l1, l2),
     #                      state_shapes['geometry'].bounds[['maxx', 'maxy']].values))     
     return None
-
-
-  
-
-
 
