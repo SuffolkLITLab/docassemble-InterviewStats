@@ -59,25 +59,25 @@ def download_shapes(state_abbrev, layer_type, resolution='500k'):
 def get_zips():
   # Download the rough US state shapes: saves time later when loading from file
   full_file_path = saved_dir().joinpath(get_boundary_file('us', 'zcta510'))
-  log('Does {} exist?'.format(full_file_path))
   if not full_file_path.exists():
+    log("{} doesn't exist, downloading".format(full_file_path))
     download_shapes('us', 'zcta510')
   # TODO(brycew): consider a bounding box: it's 2x as fast with one, but trying to read and grab
   # bounding boxes from a different shape file is slower
   return gpd.read_file('zip://' + str(full_file_path))
 
-  def get_tracts(state_abbrevs):
-    # TODO(brycew): finish
-    all_state_path = saved_dir().joinpath(get_boundary_file('us', 'state', '20m'))
-    #if not Path(all_state_path).exists():
-    #  download_shapes('us', 'state')
-    full_file_path = saved_dir().joinpath(get_boundary_file('us', 'tract'))
-    if not full_file_path.exists():
-        download_shapes('us', 'tract')
-    #state_shapes = gpd.read_file('zip://' + all_state_path)
-    #bounds = tuple(reduce(lambda l1, l2: np.minimum(l1, l2),
-    #                      state_shapes['geometry'].bounds[['minx', 'miny']].values)) + \
-    #         tuple(reduce(lambda l1, l2: np.maximum(l1, l2),
-    #                      state_shapes['geometry'].bounds[['maxx', 'maxy']].values))     
-    return None
 
+def get_tracts(state_abbrevs):
+  # TODO(brycew): finish
+  all_state_path = saved_dir().joinpath(get_boundary_file('us', 'state', '20m'))
+  #if not Path(all_state_path).exists():
+  #  download_shapes('us', 'state')
+  full_file_path = saved_dir().joinpath(get_boundary_file('us', 'tract'))
+  if not full_file_path.exists():
+      download_shapes('us', 'tract')
+  #state_shapes = gpd.read_file('zip://' + all_state_path)  
+  #bounds = tuple(reduce(lambda l1, l2: np.minimum(l1, l2),
+  #                      state_shapes['geometry'].bounds[['minx', 'miny']].values)) + \
+  #         tuple(reduce(lambda l1, l2: np.maximum(l1, l2),
+  #                      state_shapes['geometry'].bounds[['maxx', 'maxy']].values))     
+  return None

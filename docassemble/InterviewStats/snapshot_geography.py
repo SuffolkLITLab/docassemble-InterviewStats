@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, WheelZoomTool, Dropdown,\
                          Paragraph, DataTable, ColumnDataSource, TableColumn, LinearScale, PanTool,\
@@ -9,7 +11,7 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
 from scipy.stats.kde import gaussian_kde
 from shapely import wkt
-from . import cache_geography
+import cache_geography
 
 try:
   from docassemble.base.util import log
@@ -43,15 +45,15 @@ def get_filters_from_strings(filters):
      # middle element in filters will now be binary operator function
      x = make_usage_map(df, col_name, filters)
   """
-  filt_map = {'eq': operator.eq, 
-              'ne': operator.ne, 
+  filt_map = {'eq': operator.eq,
+              'ne': operator.ne,
               'lt': operator.lt,
               'gt': operator.gt,
               'le': operator.le,
               'ge': operator.ge,
               'any': lambda x, y: operator.and_(x, np.full(x.shape, True))
              }
-  return [(filt[0], filt_map[filt[1]], filt[2]) for filt in filters] 
+  return [(filt[0], filt_map[filt[1]], filt[2]) for filt in filters]
 
 
 all_zip_shapes = gpd.GeoDataFrame()
@@ -67,8 +69,8 @@ def grab_geography(agg_df, geo_col, time_col):
       end = timeit.time.time()
       log('Grabbed {} zips in {} seconds'.format(
           len(all_zip_shapes), end - start))
-    print(all_zip_shapes)
-    geo_loc_counts = all_zip_shapes.merge(agg_df, how='right',
+    # Gets rid of zips not in US, and those we're not using
+    geo_loc_counts = all_zip_shapes.merge(agg_df, how='inner',
                                           left_on='GEOID10', right_on='zip').drop(columns=[time_col])
     geo_loc_counts = geo_loc_counts.to_crs('EPSG:3857')  # for tile mapping
     return geo_loc_counts
@@ -81,11 +83,11 @@ def grab_geography(agg_df, geo_col, time_col):
 
 def make_bokeh_map(geosource, geo_loc_counts, col_name='zip'):
   zoom_tool = WheelZoomTool(zoom_on_axis=False)
-  tools = [PanTool(),zoom_tool,SaveTool()]
-  TOOLTIPS = [(col_name, '@{}'.format(col_name)), 
+  tools = [PanTool(), zoom_tool, SaveTool()]
+  TOOLTIPS = [(col_name, '@{}'.format(col_name)),
               ('Number of users', '@{}'.format(col_name + '_counts') + '{0}')]
-  map_plot = figure(title='Submissions by ' + col_name, 
-                    x_axis_type='mercator', y_axis_type='mercator', 
+  map_plot = figure(title='Submissions by ' + col_name,
+                    x_axis_type='mercator', y_axis_type='mercator',
                     tooltips=TOOLTIPS, tools=tools)
   map_plot.sizing_mode = 'stretch_width'
   map_plot.toolbar.active_scroll = zoom_tool
@@ -97,13 +99,13 @@ def make_bokeh_map(geosource, geo_loc_counts, col_name='zip'):
   # Was considering `colorcet`, but https://arxiv.org/pdf/1509.03700v1.pdf says stick with brewer
   palette = list(reversed(brewer['YlGnBu'][5])) # Gets yellow as low and blue as high
   max_val = max(geo_loc_counts[col_name + '_counts'])
-  color_mapper = LinearColorMapper(palette = palette, low = 0, high = max_val)
-  map_plot.patches('xs', 'ys', source = geosource, 
+  color_mapper = LinearColorMapper(palette=palette, low=0, high=max_val)
+  map_plot.patches('xs', 'ys', source=geosource, 
                    fill_color = {'field': col_name + '_counts', 'transform': color_mapper},
                    line_color='black', line_width=0.5, fill_alpha=0.5)
-  color_bar = ColorBar(color_mapper=color_mapper, label_standoff=8, height =20,
+  color_bar = ColorBar(color_mapper=color_mapper, label_standoff=8, height=20,
                        border_line_color=None, location=(0, 0),
-                       orientation = 'horizontal')
+                       orientation='horizontal')
   map_plot.add_layout(color_bar, 'below')
   return map_plot
   
@@ -113,9 +115,9 @@ def make_bokeh_date_histogram(date_series):
   ridge_plots = figure(title='When did users submit?', x_axis_label='Date', y_axis_label='Count', x_axis_type='datetime', toolbar_location=None)
   ridge_plots.sizing_mode = 'stretch_width'
   ridge_plots.toolbar.active_drag = None
-  ridge_plots.toolbar.active_scroll= None
+  ridge_plots.toolbar.active_scroll = None
 
-  hist, edges = np.histogram(date_series, density=False, bins = 50)
+  hist, edges = np.histogram(date_series, density=False, bins=50)
   hist_df = pd.DataFrame({'amount': hist, 'left': pd.to_datetime(edges[:-1], unit='s'), 
                           'right': pd.to_datetime(edges[1:], unit='s')})
   fmt_str = "%b %d, %y, %r"
@@ -124,7 +126,7 @@ def make_bokeh_date_histogram(date_series):
   ridge_source = ColumnDataSource(hist_df)
   ridge_plots.quad(top='amount', bottom=0, left='left', right='right', fill_color='orange',
                    line_color='black', alpha=0.8, source=ridge_source)
-  hover = HoverTool(tooltips = [('Interval', '@interval'), ('Count', '@amount')])
+  hover = HoverTool(tooltips=[('Interval', '@interval'), ('Count', '@amount')])
   ridge_plots.add_tools(hover)
   return ridge_plots
 
@@ -222,7 +224,7 @@ def main(argv):
     print('Need <input csv> <output_html>')
     return
   loc_df = pd.read_csv(argv[1], dtype='str')
-  layout = make_usage_map(loc_df, 'zip', 'modtime', [('state', operator.eq, 'MA')])
+  layout = make_usage_map(loc_df, 'zip', 'modtime') #, [('state', operator.eq, 'MA')])
   write_standalone_usage_map(layout, argv[2])
 
 if __name__ == '__main__':
