@@ -12,15 +12,15 @@ except:
   log = print
 
 
-def download_file(url, local_filename):
+def download_file(url, local_file):
   # https://stackoverflow.com/a/16696317
-  log('Downloading {} to {}'.format(url, local_filename))
+  log('Downloading {} to {}'.format(url, local_file))
   with requests.get(url, stream=True) as r:
     r.raise_for_status()
-    with open(local_filename, 'wb') as f:
+    with local_file.open(mode='wb') as f:
       for chunk in r.iter_content(chunk_size=8192):
         f.write(chunk)
-  return local_filename
+  return local_file
 
 
 def get_fips_code(state_abbrev):
@@ -34,8 +34,8 @@ base_url = 'https://www2.census.gov/geo/tiger/GENZ2019/shp/'
 
 
 def saved_dir():
-  cdir = os.path.dirname(os.path.abspath(__file__))
-  return os.path.join(cdir, 'data/sources')
+  cdir = Path(__file__).resolve().parent
+  return cdir.joinpath('data/sources')
 
 
 def get_boundary_file(state_abbrev, layer_type, resolution='500k'):
@@ -49,29 +49,30 @@ def download_shapes(state_abbrev, layer_type, resolution='500k'):
   for layer type (entity name)
   """
   base_name = get_boundary_file(state_abbrev, layer_type, resolution)
-  download_file(base_url + base_name, os.path.join(saved_dir(), base_name))
+  to_save_dir = saved_dir()
+  if not to_save_dir.exists():
+    to_save_dir.mkdir(parents=True, exist_ok=True)
+  download_file(base_url + base_name, to_save_dir.joinpath(base_name))
   return True
 
 
 def get_zips():
   # Download the rough US state shapes: saves time later when loading from file
-  full_file_path = os.path.join(saved_dir(), get_boundary_file('us', 'zcta510'))
+  full_file_path = saved_dir().joinpath(get_boundary_file('us', 'zcta510'))
   log('Does {} exist?'.format(full_file_path))
-  if not Path(full_file_path).exists():
-    for (dp, dn, fn) in os.walk('../../'):
-      log('{} {} {}'.format(dp, list(dn), list(fn)))
+  if not full_file_path.exists():
     download_shapes('us', 'zcta510')
   # TODO(brycew): consider a bounding box: it's 2x as fast with one, but trying to read and grab
   # bounding boxes from a different shape file is slower
-  return gpd.read_file('zip://' + full_file_path)
+  return gpd.read_file('zip://' + str(full_file_path))
 
   def get_tracts(state_abbrevs):
     # TODO(brycew): finish
-    all_state_path = os.path.join(saved_dir(), get_boundary_file('us', 'state', '20m'))
+    all_state_path = saved_dir().joinpath(get_boundary_file('us', 'state', '20m'))
     #if not Path(all_state_path).exists():
     #  download_shapes('us', 'state')
-    full_file_path = os.path.join(saved_dir(), get_boundary_file('us', 'tract'))
-    if not Path(full_file_path).exists():
+    full_file_path = saved_dir().joinpath(get_boundary_file('us', 'tract'))
+    if not full_file_path.exists():
         download_shapes('us', 'tract')
     #state_shapes = gpd.read_file('zip://' + all_state_path)
     #bounds = tuple(reduce(lambda l1, l2: np.minimum(l1, l2),
