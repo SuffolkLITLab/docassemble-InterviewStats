@@ -73,7 +73,7 @@ code: |
   except Exception as ex:
     log('Columns will be blank because of: {}, {}'.format(ex.args, ex))
     columns = ['']
-    state_list = ['']
+    state_list = []
 ---
 code: |
   import operator
@@ -106,7 +106,7 @@ fields:
     datatype: yesno
     disable if: 
       code: |
-        'state' not in formatted_data.columns
+        'state' not in formatted_data.columns or len(state_list) == 0
   - Find States that: state_op
     datatype: dropdown
     show if: filter_state
