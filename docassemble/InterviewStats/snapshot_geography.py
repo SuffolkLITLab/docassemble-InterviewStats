@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 from bokeh.plotting import figure, show, output_file
-from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, WheelZoomTool, Dropdown,\
-    Paragraph, DataTable, ColumnDataSource, TableColumn, LinearScale, PanTool,\
-    SaveTool, HoverTool
+from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, \
+    WheelZoomTool, Dropdown, Paragraph, DataTable, ColumnDataSource, \
+    TableColumn, LinearScale, PanTool, SaveTool, HoverTool
 from bokeh.tile_providers import Vendors, get_provider
 from bokeh.resources import CDN
 from bokeh.palettes import brewer
@@ -11,7 +11,7 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
 from scipy.stats.kde import gaussian_kde
 from shapely import wkt
-from . import cache_geography
+from cache_geography import get_zips
 
 try:
     from docassemble.base.util import log
@@ -67,7 +67,7 @@ def grab_geography(agg_df, geo_col, time_col):
         agg_zip_codes = agg_df['zip']
         if all_zip_shapes.empty:
             start = timeit.time.time()
-            all_zip_shapes = cache_geography.get_zips()
+            all_zip_shapes = get_zips()
             end = timeit.time.time()
             log('Grabbed {} zips in {} seconds'.format(
                 len(all_zip_shapes), end - start))
