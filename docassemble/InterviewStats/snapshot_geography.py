@@ -11,7 +11,7 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.embed import file_html, components
 from scipy.stats.kde import gaussian_kde
 from shapely import wkt
-from cache_geography import get_zips
+from .cache_geography import get_zips
 
 try:
     from docassemble.base.util import log

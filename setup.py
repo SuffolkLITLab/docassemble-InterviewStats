@@ -43,7 +43,7 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
     return out
 
 setup(name='docassemble.InterviewStats',
-      version='0.0.8',
+      version='0.0.9',
       description=('A docassemble extension, to view stats from other interviews'),
       long_description='# docassemble.InterviewStats\r\n\r\nA docassemble interview that lets you view statistics from other saved interview responses. \r\n\r\n## Author\r\n\r\nQuinten Steenhuis\r\nBryce Willey\r\n\r\n',
       long_description_content_type='text/markdown',
