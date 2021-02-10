@@ -23,6 +23,7 @@ import numpy as np
 import geopandas as gpd
 import operator
 import timeit
+from typing import Any, Callable, Tuple, List, Optional
 
 import sys
 import cenpy
@@ -30,8 +31,10 @@ import cenpy
 __all__ = ['get_filters_from_strings', 'make_usage_map',
            'write_standalone_usage_map', 'get_embedable_usage_map']
 
+DesiredFilter = Tuple[str, str, Any]
+FunctionalFilter = Tuple[str, Callable[[Any, Any], bool]]
 
-def get_filters_from_strings(filters):
+def get_filters_from_strings(filters: List[DesiredFilter]) -> List[FunctionalFilter]:
     """
     Make binary operator functions from the given string.
     'eq' -> '=='
@@ -61,7 +64,7 @@ def get_filters_from_strings(filters):
 all_zip_shapes = gpd.GeoDataFrame()
 
 
-def grab_geography(agg_df, geo_col, time_col):
+def grab_geography(agg_df, geo_col: str, time_col: str) -> Optional[gpd.GeoDataFrame]:
     global all_zip_shapes
     if geo_col.lower() == 'zip':
         agg_zip_codes = agg_df['zip']
@@ -83,7 +86,7 @@ def grab_geography(agg_df, geo_col, time_col):
         return None
 
 
-def make_bokeh_map(geosource, geo_loc_counts, col_name='zip'):
+def make_bokeh_map(geosource, geo_loc_counts, col_name: str='zip'):
     zoom_tool = WheelZoomTool(zoom_on_axis=False)
     tools = [PanTool(), zoom_tool, SaveTool()]
     TOOLTIPS = [(col_name, '@{}'.format(col_name)),
@@ -134,7 +137,7 @@ def make_bokeh_date_histogram(date_series):
     return ridge_plots
 
 
-def make_bokeh_table(geosource, col_name='zip'):
+def make_bokeh_table(geosource, col_name: str='zip'):
     # Make a table of the numerical values that we can sort by
     dt_columns = [
         TableColumn(field=col_name, title=col_name),
@@ -151,7 +154,7 @@ def make_bokeh_table(geosource, col_name='zip'):
     return data_table
 
 
-def make_usage_map(loc_df, geo_col='zip', time_col='modtime', filters=[]):
+def make_usage_map(loc_df, geo_col: str='zip', time_col: str='modtime', filters: List[FunctionalFilter]=[]):
     """
     Returns a bokeh layout, with a choropleth map of locations we've received
     Expects the dataframe to contain rows with a `geo_col` and `time_col` columns
@@ -217,13 +220,13 @@ def get_embedable_usage_map(layout):
     return script, div, inline_cdn
 
 
-def write_standalone_usage_map(layout, output_file):
+def write_standalone_usage_map(layout, output_file: str):
     html = file_html(layout, CDN, 'All Data')
     with open('{}'.format(output_file), 'w') as f:
         f.write(html)
 
 
-def main(argv):
+def main(argv: List[str]):
     if len(argv) < 3:
         print('Need <input csv> <output_html>')
         return

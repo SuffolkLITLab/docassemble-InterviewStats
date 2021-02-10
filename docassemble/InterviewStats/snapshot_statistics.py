@@ -3,7 +3,7 @@ from docassemble.base.util import variables_snapshot_connection, user_info
 __all__ = ['get_stats']
 
 
-def get_stats(filename):
+def get_stats(filename: str):
     conn = variables_snapshot_connection()
     cur = conn.cursor()
     # use a parameterized query to prevent SQL injection

@@ -12,7 +12,7 @@ except:
     log = print
 
 
-def download_file(url, local_file):
+def download_file(url: str, local_file: str) -> str:
     """
     Download a file from an arbitrary URL to a local file
     """
@@ -26,7 +26,7 @@ def download_file(url, local_file):
     return local_file
 
 
-def get_fips_code(state_abbrev):
+def get_fips_code(state_abbrev: str) -> str:
     """
     Gets the FIPS (Federal Information Processing Standards) code for a state
     abbreviation, like 'MA'.
@@ -40,17 +40,17 @@ def get_fips_code(state_abbrev):
 base_url = 'https://www2.census.gov/geo/tiger/GENZ2019/shp/'
 
 
-def get_boundary_file(state_abbrev, layer_type, resolution='500k'):
+def get_boundary_file(state_abbrev: str, layer_type: str, resolution: str='500k') -> str:
     return 'cb_2019_{}_{}_{}.zip'.format(
         get_fips_code(state_abbrev), layer_type, resolution)
 
 
-def saved_dir():
+def saved_dir() -> Path:
     cdir = Path(__file__).resolve().parent
     return cdir.joinpath('data/sources')
 
 
-def download_shapes(state_abbrev, layer_type, resolution='500k'):
+def download_shapes(state_abbrev: str, layer_type: str, resolution: str='500k') -> bool:
     """
     See https://www2.census.gov/geo/tiger/GENZ2019/2019_file_name_def.pdf?#
     for layer type (entity name)
@@ -63,7 +63,7 @@ def download_shapes(state_abbrev, layer_type, resolution='500k'):
     return True
 
 
-def get_zips():
+def get_zips() -> gpd.GeoDataFrame:
     full_file_path = saved_dir().joinpath(get_boundary_file('us', 'zcta510'))
     if not full_file_path.exists():
         log("{} doesn't exist, downloading".format(full_file_path))
