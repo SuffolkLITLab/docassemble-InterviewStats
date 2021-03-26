@@ -188,9 +188,9 @@ code: |
   filter_list = []
   readable = {'state': 'State', 'modtime': 'Date',
               'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
-  if filter_state:
+  if defined('filter_state') and filter_state:
     filter_list.append(('state', state_op, state_to_filter))
-  if filter_date:
+  if defined('filter_date') and filter_date:
     date_to_filter = date_to_filter.replace(tzinfo=None)
     filter_list.append(('modtime', date_op, date_to_filter))
 
