@@ -208,15 +208,17 @@ def make_usage_map(loc_df, geo_col: str='zip', time_col: str='modtime', filters:
 
 
 def get_embedable_usage_map(layout):
+    import bokeh
     script, div = components(layout)
+    bokeh_version = bokeh.__version__ if str(bokeh.__version__) != '' else '2.3.0'
     # from https://docs.bokeh.org/en/latest/docs/user_guide/embed.html#components
-    inline_cdn = """<script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.2.3.min.js"
+    inline_cdn = """<script src="https://cdn.bokeh.org/bokeh/release/bokeh-{0}.min.js"
         crossorigin="anonymous"></script>
-<script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.2.3.min.js"
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-{0}.min.js"
         crossorigin="anonymous"></script>
-<script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.2.3.min.js"
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-{0}.min.js"
         crossorigin="anonymous"></script>
-        """
+        """.format(bokeh_version)
     return script, div, inline_cdn
 
 

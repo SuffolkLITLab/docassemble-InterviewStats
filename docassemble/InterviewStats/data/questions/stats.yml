@@ -8,9 +8,9 @@ metadata:
 ---
 features:
   javascript:
-    - https://cdn.bokeh.org/bokeh/release/bokeh-2.2.3.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.2.3.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.2.3.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js
 ---
 modules:
   - .snapshot_statistics
@@ -35,7 +35,7 @@ code: |
     options={'remove_timezone': True})
   formatted_data.to_excel(writer, index=False)
   writer.save()
-  xlsx_output.commit()  
+  xlsx_output.commit()
   del writer
   saved_data = True
 ---
@@ -45,7 +45,7 @@ code: |
   del geo_layout
 ---
 question: |
-  What interview do you want to view statistics for?  
+  What interview do you want to view statistics for?
 fields:
   - Filename: filename
     code: |
@@ -53,15 +53,24 @@ fields:
 ---
 code: |
   interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
-  #for interview in interview_menu():
-  #  if interview.get('filename') == filename:  
-  #    interview_title = interview.get('
 ---
 code: |
-  if 'data/questions' in filename:
-    stats = get_stats(filename)
+  if filename is not None:
+    if 'data/questions' in filename:
+      stats = get_stats(filename)
+    else:
+      stats = get_stats(filename.replace(':',':data/questions/'))
   else:
-    stats = get_stats(filename.replace(':',':data/questions/'))
+    no_interview_stats
+---
+event: no_interview_stats
+question: There are no interviews to look for data in!
+subquestion: |
+  There aren't any interviews that we can look for data in. There should be at least one interview
+  listed in the 'dispatch' section of the configuration. See
+  [the docassemble documentation](https://docassemble.org/docs/config.html#dispatch) for more informatieon
+buttons:
+  - Exit: exit
 ---
 need: stats
 code: |
@@ -80,9 +89,11 @@ code: |
   import pandas as pd
 ---
 code: |
-  for stat in stats:
-    stat[1]['modtime'] = stat[0]
-  formatted_data = pd.DataFrame([stat[1] for stat in stats])
+  formatted_data = pd.DataFrame()
+  if stats is not None:
+    for stat in stats:
+      stat[1]['modtime'] = stat[0]
+    formatted_data = pd.DataFrame([stat[1] for stat in stats])
 ---
 mandatory: True
 id: view_data
@@ -90,13 +101,13 @@ question: |
   Stats for ${interview_title}: ${ len(stats) }
 subquestion: |
   Total submissions: ${ len(stats) }
-  
+
   % if len(stats):
-  Group by: 
+  Group by:
   % for col in columns:
-  [${col}](${ url_action('show_grouped_data', group_by = col ) }) | 
+  [${col}](${ url_action('show_grouped_data', group_by = col ) }) |
   % endfor
-  
+
   [:file-excel: Download](${ xlsx_output.url_for() })
   % endif
 under: |
@@ -104,7 +115,7 @@ under: |
 fields:
   - Filter State: filter_state
     datatype: yesno
-    disable if: 
+    disable if:
       code: |
         'state' not in formatted_data.columns or len(state_list) == 0
   - Find States that: state_op
@@ -120,7 +131,7 @@ fields:
       state_list
   - Filter by Date: filter_date
     datatype: yesno
-    disable if: 
+    disable if:
       code: |
         'modtime' not in formatted_data.columns
   - Find submissions that are: date_op
@@ -155,38 +166,38 @@ back button: True
 event: show_grouped_data
 question: |
   Total submissions: ${ len(stats) }
-subquestion: |  
-  Group by: 
+subquestion: |
+  Group by:
   % for col in columns:
-  [${col}](${ url_action('show_grouped_data', group_by = col)  }) 
+  [${col}](${ url_action('show_grouped_data', group_by = col)  })
   % endfor
-  
+
   ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
-  
+
   [:file-excel: Download](${ xlsx_output.url_for() })
 
   ${ map_div }
 script: |
   ${ map_script }
 buttons:
-  - Restart: restart  
+  - Restart: restart
 ---
 need: start_filter
 depends on: state_op, state_to_filter
 code: |
   filter_list = []
-  readable = {'state': 'State', 'modtime': 'Date', 
+  readable = {'state': 'State', 'modtime': 'Date',
               'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
   if filter_state:
     filter_list.append(('state', state_op, state_to_filter))
   if filter_date:
     date_to_filter = date_to_filter.replace(tzinfo=None)
     filter_list.append(('modtime', date_op, date_to_filter))
-    
+
   filter_description = ' and '.join(
       ['{} {} {}'.format(readable[elem[0]], readable[elem[1]], elem[2])
        for elem in filter_list])
-  filters = get_filters_from_strings(filter_list) 
+  filters = get_filters_from_strings(filter_list)
   filt_geo_layout = make_usage_map(formatted_data, geo_col='zip',
                                    time_col='modtime', filters=filters)
   filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
