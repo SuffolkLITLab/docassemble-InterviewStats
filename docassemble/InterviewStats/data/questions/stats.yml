@@ -68,7 +68,7 @@ question: There are no interviews to look for data in!
 subquestion: |
   There aren't any interviews that we can look for data in. There should be at least one interview
   listed in the 'dispatch' section of the configuration. See
-  [the docassemble documentation](https://docassemble.org/docs/config.html#dispatch) for more informatieon
+  [the docassemble documentation](https://docassemble.org/docs/config.html#dispatch) for more information
 buttons:
   - Exit: exit
 ---
