@@ -1,0 +1,101 @@
+---
+metadata:
+  temporary session: True
+---
+modules:
+  - .snapshot_statistics
+---
+objects:
+  - xlsx_output: DAFile.using(filename="stats.xlsx")
+---
+mandatory: True
+id: interview order
+code: |
+  if not dispatch_interviews or not all_subscriptions or not matching_interview:
+    exit_no_subscriptions
+  if not user_authorized:
+    exit_unauthorized  
+  saved_data
+  respond_with_xlsx  
+  message(matching_interview or "No interview found")     
+---
+event: exit_no_subscriptions
+code: |
+  data = {
+    "error": "No matching subscriptions exist."
+  }
+  response(response=json.dumps(data), response_code=404)
+---
+event: exit_unauthorized
+code: |
+  data = {
+    "error": "You are not authorized to view this subscription. Please verify your access key."
+  }
+  response(response=json.dumps(data), response_code=401)
+---
+event: respond_with_xlsx
+code: |
+  response(file=xlsx_output, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+---
+code: |
+  desired_link = url_args.get('link')
+---
+code: |
+  auth = url_args.get('auth')
+---
+code: |
+  matching_interview = dispatch_interviews.get(desired_link)
+---
+code: |
+  user_authorized = bool(next(
+    filter(
+      lambda y: next(iter(y.values())) == auth and next(iter(y.keys())) == desired_link,
+      all_subscriptions),
+    False))
+---
+code: |
+  import operator
+  import pandas as pd
+---
+code: |
+  if matching_interview is not None:
+    if 'data/questions' in matching_interview:
+      stats = get_stats(matching_interview)
+    else:
+      stats = get_stats(matching_interview.replace(':',':data/questions/'))
+  else:
+    no_interview_stats
+---
+code: |
+  formatted_data = pd.DataFrame()
+  if stats is not None:
+    for stat in stats:
+      stat[1]['modtime'] = stat[0]
+    formatted_data = pd.DataFrame([stat[1] for stat in stats])
+---
+event: no_interview_stats
+question: There are no interviews to look for data in!
+subquestion: |
+  There aren't any interviews that we can look for data in. There should be at least one interview
+  listed in the 'dispatch' section of the configuration. See
+  [the docassemble documentation](https://docassemble.org/docs/config.html#dispatch) for more information
+buttons:
+  - Exit: exit    
+---
+code: |
+  proper_name = space_to_underscore(matching_interview) + "_stats"
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
+  writer = pd.ExcelWriter(xlsx_output.path(),
+    engine='xlsxwriter',
+    options={'remove_timezone': True})
+  formatted_data.to_excel(writer, index=False)
+  writer.save()
+  xlsx_output.commit()
+  del writer
+  saved_data = True
+---
+code: |
+  dispatch_interviews = get_config('dispatch',[])
+---
+code: |
+  all_subscriptions = get_config('stats subscriptions')

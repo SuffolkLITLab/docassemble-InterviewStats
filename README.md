@@ -12,6 +12,33 @@ A docassemble interview that lets you view statistics from other saved interview
 1. Select the target interview in the drop down. 
 1. You can export the data in a Excel format by clicking the `Download` link on the stats page.
 
+## Anonymous stats
+
+If you would like to provide login-less access to stats for an interview
+in your `dispatch` directive, you can do so as follows:
+
+1. Add a directive in your configuration file, like this: 
+```yaml
+stats subscriptions:
+  - cdc_moratorium: 12345abcedfg17821309
+  - 209a: 4859123jkljsafdsf0913132
+```
+
+Where the value on the left corresponds to the key of an entry in your
+`dispatch` directive, and the value on the right is an arbitrary password you
+create. I recommend using something like https://onlinehashtools.com/generate-random-md5-hash
+to create a random password to control access.
+
+You can add as many unique passwords as you want for each entry you share.
+This means you can distribute multiple links without sharing the password.
+
+Then, someone can access the link to a specific interview's stats by 
+visiting this url:
+
+/start/InterviewStats/subscribe/?link=cdc_moratorium&auth=12345abcedfg17821309
+
+They will be directed immediately to download an XlSX file containing the
+statistics.
 
 ## Example
 
