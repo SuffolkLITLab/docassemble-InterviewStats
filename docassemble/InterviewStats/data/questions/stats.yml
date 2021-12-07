@@ -48,6 +48,7 @@ question: |
   What interview do you want to view statistics for?
 fields:
   - Filename: filename
+    datatype: combobox
     code: |
       [{interview.get('filename'): interview.get('title')} for interview in interview_menu()]
 ---
