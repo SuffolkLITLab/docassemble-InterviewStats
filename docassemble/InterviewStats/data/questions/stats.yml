@@ -12,6 +12,10 @@ features:
     - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js
     - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js
 ---
+default screen parts: 
+  footer: |
+    
+---
 modules:
   - .snapshot_statistics
   - .snapshot_geography
@@ -57,7 +61,7 @@ code: |
 ---
 code: |
   if filename is not None:
-    if 'data/questions' in filename:
+    if 'data/questions' in filename or 'playground' in filename:
       stats = get_stats(filename)
     else:
       stats = get_stats(filename.replace(':',':data/questions/'))
