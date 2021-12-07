@@ -14,7 +14,7 @@ features:
 ---
 default screen parts: 
   footer: |
-    
+    [:sync-alt: Restart](${ url_of('restart') } )
 ---
 modules:
   - .snapshot_statistics
