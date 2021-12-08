@@ -11,6 +11,11 @@ features:
     - https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js
     - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js
     - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js
+  question help button: True    
+---
+default screen parts: 
+  footer: |
+    [:sync-alt: Restart](${ url_of('restart') } )
 ---
 modules:
   - .snapshot_statistics
@@ -57,7 +62,7 @@ code: |
 ---
 code: |
   if filename is not None:
-    if 'data/questions' in filename:
+    if 'data/questions' in filename or 'playground' in filename:
       stats = get_stats(filename)
     else:
       stats = get_stats(filename.replace(':',':data/questions/'))
@@ -149,6 +154,8 @@ script: |
     ${ map_script}
 continue button field: start_filter
 continue button label: Filter
+help: |
+  ${ formatted_data.to_html() }
 ---
 mandatory: True
 depends on: filt_map_script, filt_map_div
