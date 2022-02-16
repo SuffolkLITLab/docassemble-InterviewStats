@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
-from bokeh.plotting import figure, show, output_file
+from bokeh.plotting import figure
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, \
-    WheelZoomTool, Dropdown, Paragraph, DataTable, ColumnDataSource, \
-    TableColumn, LinearScale, PanTool, SaveTool, HoverTool
+    WheelZoomTool, DataTable, ColumnDataSource, \
+    TableColumn, PanTool, SaveTool, HoverTool
 from bokeh.tile_providers import Vendors, get_provider
 from bokeh.resources import CDN
 from bokeh.palettes import brewer
-from bokeh.layouts import widgetbox, row, column
+from bokeh.layouts import column
 from bokeh.embed import file_html, components
-from scipy.stats.kde import gaussian_kde
-from shapely import wkt
 from .cache_geography import get_zips
 
 try:

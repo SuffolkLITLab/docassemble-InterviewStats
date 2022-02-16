@@ -80,25 +80,15 @@ buttons:
 ---
 need: stats
 code: |
-  try:
-    first_row = next(iter(stats))
-    if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
-      columns = list(first_row[1].keys())
-    state_list = set([row[1]['state'] for row in stats])
-  except Exception as ex:
-    log('Columns will be blank because of: {}, {}'.format(ex.args, ex))
-    columns = ['']
-    state_list = []
+  columns = get_columns(stats)
+  possible_states = get_column_values(stats, 'state')
 ---
 code: |
-  import operator
   import pandas as pd
 ---
 code: |
   formatted_data = pd.DataFrame()
   if stats is not None:
-    for stat in stats:
-      stat[1]['modtime'] = stat[0]
     formatted_data = pd.DataFrame([stat[1] for stat in stats])
 ---
 mandatory: True
@@ -123,7 +113,7 @@ fields:
     datatype: yesno
     disable if:
       code: |
-        'state' not in formatted_data.columns or len(state_list) == 0
+        'state' not in formatted_data.columns or not possible_states
   - Find States that: state_op
     datatype: dropdown
     show if: filter_state
@@ -134,7 +124,7 @@ fields:
     datatype: dropdown
     show if: filter_state
     code: |
-      state_list
+      possible_states
   - Filter by Date: filter_date
     datatype: yesno
     disable if:
