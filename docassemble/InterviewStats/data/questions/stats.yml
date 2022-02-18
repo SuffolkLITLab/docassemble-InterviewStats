@@ -8,14 +8,39 @@ metadata:
 ---
 features:
   javascript:
-    - https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js
   question help button: True    
 ---
 default screen parts: 
   footer: |
     [:sync-alt: Restart](${ url_of('restart') } )
+---
+modules:
+  - cProfile
+  - pstats
+---
+objects:
+  - download_profile: DAFile
+---
+code: |
+  profile = Profile()
+---
+code: |
+  profile_filename = 'test.prof'
+---
+code: |
+  download_profile.initialize(filename=profile_filename)
+  profile.enable()
+  start_profile =True
+---
+code: |
+  profile.disable()
+  profile.dump_stats(download_profile.path())
+  log('Profiling ready at ' + download_profile.url_for())
+  del profile
+  stop_profile = True
 ---
 modules:
   - .snapshot_statistics
@@ -28,10 +53,11 @@ id: interview order
 mandatory: True
 code: |
   filename
+  simple_data
   formatted_data
-  saved_data
   viewed_filtered
 ---
+event: generate_excel
 code: |
   proper_name = space_to_underscore(filename) + "_stats"
   xlsx_output.initialize(filename=proper_name + ".xlsx")
@@ -42,7 +68,19 @@ code: |
   writer.save()
   xlsx_output.commit()
   del writer
-  saved_data = True
+  show_excel_download
+---
+event: show_excel_download
+question: |
+  Excel Download
+subquestion: |
+  [:file-excel: Download](${ xlsx_output.url_for() })
+---
+question: |
+  Simple data
+subquestion: |
+  ${ get_summary_stats(filename) }
+continue button field: simple_data
 ---
 code: |
   geo_layout = make_usage_map(formatted_data)
@@ -55,7 +93,7 @@ fields:
   - Filename: filename
     datatype: combobox
     code: |
-      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()]
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
 ---
 code: |
   interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
@@ -89,7 +127,7 @@ code: |
 code: |
   formatted_data = pd.DataFrame()
   if stats is not None:
-    formatted_data = pd.DataFrame([stat[1] for stat in stats])
+    formatted_data = pd.DataFrame(stats)
 ---
 mandatory: True
 id: view_data
@@ -104,7 +142,7 @@ subquestion: |
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) |
   % endfor
 
-  [:file-excel: Download](${ xlsx_output.url_for() })
+  [:file-excel: Make Excel Download](${ url_action('generate_excel') })
   % endif
 under: |
   ${ map_div }
@@ -148,6 +186,7 @@ help: |
   ${ formatted_data.to_html() }
 ---
 mandatory: True
+event: viewed_filtered
 depends on: filt_map_script, filt_map_div
 need: filt_map_script, filt_map_div
 id: view_filtered_data
@@ -157,8 +196,6 @@ under: |
   ${ filt_map_div }
 script: |
     ${ filt_map_script }
-continue button field: viewed_filtered
-continue button label: Finish stats
 back button: True
 ---
 event: show_grouped_data
