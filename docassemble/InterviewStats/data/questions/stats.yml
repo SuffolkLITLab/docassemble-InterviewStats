@@ -182,8 +182,8 @@ script: |
     ${ map_script}
 continue button field: start_filter
 continue button label: Filter
-help: |
-  ${ formatted_data.to_html() }
+#help: |
+#  ${ formatted_data.to_html() }
 ---
 mandatory: True
 event: viewed_filtered
