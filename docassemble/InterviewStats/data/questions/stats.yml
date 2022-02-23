@@ -1,7 +1,7 @@
 ---
 metadata:
   title: All Interview Statistics
-  short title: view stats
+  short title: View Stats
   temporary session: True
   required privileges:
     - admin
@@ -11,36 +11,11 @@ features:
     - https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.min.js
     - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js
     - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js
-  question help button: True    
+  question help button: True
 ---
 default screen parts: 
   footer: |
     [:sync-alt: Restart](${ url_of('restart') } )
----
-modules:
-  - cProfile
-  - pstats
----
-objects:
-  - download_profile: DAFile
----
-code: |
-  profile = Profile()
----
-code: |
-  profile_filename = 'test.prof'
----
-code: |
-  download_profile.initialize(filename=profile_filename)
-  profile.enable()
-  start_profile =True
----
-code: |
-  profile.disable()
-  profile.dump_stats(download_profile.path())
-  log('Profiling ready at ' + download_profile.url_for())
-  del profile
-  stop_profile = True
 ---
 modules:
   - .snapshot_statistics
@@ -59,16 +34,24 @@ code: |
 ---
 event: generate_excel
 code: |
-  proper_name = space_to_underscore(filename) + "_stats"
-  xlsx_output.initialize(filename=proper_name + ".xlsx")
-  writer = pd.ExcelWriter(xlsx_output.path(),
-    engine='xlsxwriter',
-    options={'remove_timezone': True})
-  formatted_data.to_excel(writer, index=False)
-  writer.save()
-  xlsx_output.commit()
-  del writer
-  show_excel_download
+  if stats_size > 10000:
+    if make_excel_task.ready():
+      if make_excel_task.failed():
+        show_failed_screen
+      show_excel_download
+    else:
+      waiting_screen
+  else:
+    proper_name = space_to_underscore(filename) + "_stats"
+    xlsx_output.initialize(filename=proper_name + ".xlsx")
+    writer = pd.ExcelWriter(xlsx_output.path(),
+      engine='xlsxwriter',
+      options={'remove_timezone': True})
+    formatted_data.to_excel(writer, index=False)
+    writer.save()
+    xlsx_output.commit()
+    del writer
+    show_excel_download
 ---
 event: show_excel_download
 question: |
@@ -76,10 +59,61 @@ question: |
 subquestion: |
   [:file-excel: Download](${ xlsx_output.url_for() })
 ---
+code: |
+  make_excel_task = background_action('excel_task', data=formatted_data)
+---
+event: excel_task
+code: |
+  bg_data = action_argument('data')
+  proper_name = space_to_underscore(filename) + "_stats"
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
+  writer = pd.ExcelWriter(xlsx_output.path(),
+    engine='xlsxwriter',
+    options={'remove_timezone': True})
+  bg_data.to_excel(writer, index=False)
+  writer.save()
+  xlsx_output.commit()
+  del writer
+  background_response_action('excel_resp', the_excel=xlsx_output) 
+---
+event: waiting_screen
+id: waiting screen
 question: |
-  Simple data
+  We're generating your excel sheet.
 subquestion: |
-  ${ get_summary_stats(filename) }
+  This may take a few minutes, so leave this tab open. Thanks for waiting.
+reload: True
+---
+event: show_failed_screen
+question: |
+  Sorry, something went wrong
+subquestion: |
+  We had some trouble trying to assemble your excel sheet.
+
+  ${ make_excel_task.result() }
+buttons:
+  - Restart: restart
+---
+event: excel_resp
+code: |
+  xlsx_output = action_argument('the_excel')
+  background_response()
+---
+code: |
+  summary_stats = get_summary_stats(filename)
+---
+reconsider: summary_stats
+question: |
+  Summary data for ${ interview_title }
+subquestion: |
+  * Total sessions: ${ summary_stats[0] }
+  * First session: ${ summary_stats[1] }
+  * Latest session: ${ summary_stats[2] }
+  
+  % if summary_stats[0] > 10000:
+  If you have a lot of sessions (over 10,000), some operations might
+  take a long time.
+  % endif
 continue button field: simple_data
 ---
 code: |
@@ -126,8 +160,10 @@ code: |
 ---
 code: |
   formatted_data = pd.DataFrame()
+  stats_size = 0
   if stats is not None:
     formatted_data = pd.DataFrame(stats)
+    stats_size = formatted_data.shape[0]
 ---
 mandatory: True
 id: view_data
