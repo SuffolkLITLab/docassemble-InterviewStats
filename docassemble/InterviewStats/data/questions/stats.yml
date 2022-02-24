@@ -52,6 +52,7 @@ code: |
     xlsx_output.commit()
     del writer
     show_excel_download
+    generate_excel = True
 ---
 event: show_excel_download
 question: |
@@ -111,7 +112,7 @@ subquestion: |
   * Latest session: ${ summary_stats[2] }
   
   % if summary_stats[0] > 10000:
-  If you have a lot of sessions (over 10,000), some operations might
+  You have a lot of sessions; some operations might
   take a long time.
   % endif
 continue button field: simple_data
@@ -153,6 +154,8 @@ buttons:
 need: stats
 code: |
   columns = get_columns(stats)
+  my_col = next(iter(columns), None)
+  groupable_columns = list(set(columns).difference(set(['modtime', 'user_session_id'])))
   possible_states = get_column_values(stats, 'state')
 ---
 code: |
@@ -168,17 +171,17 @@ code: |
 mandatory: True
 id: view_data
 question: |
-  Stats for ${interview_title}: ${ len(stats) }
+  Stats for ${interview_title}
 subquestion: |
   Total submissions: ${ len(stats) }
 
   % if len(stats):
   Group by:
-  % for col in columns:
+  % for col in groupable_columns:
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) |
   % endfor
 
-  [:file-excel: Make Excel Download](${ url_action('generate_excel') })
+  [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
   % endif
 under: |
   ${ map_div }
@@ -235,23 +238,28 @@ script: |
 back button: True
 ---
 event: show_grouped_data
+code: |
+  my_col = action_argument('group_by')
+  force_ask('display_grouped_data')
+---
 question: |
-  Total submissions: ${ len(stats) }
+  Stats for ${interview_title}
 subquestion: |
+  Total submissions: ${ len(stats) }
+
   Group by:
-  % for col in columns:
+  % for col in groupable_columns:
   [${col}](${ url_action('show_grouped_data', group_by = col)  })
   % endfor
 
-  ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
+  ${ formatted_data.groupby(by=my_col).count().to_html(classes=('table','table-striped')) }
 
-  [:file-excel: Download](${ xlsx_output.url_for() })
-
+  [:file-excel: Download](${ url_ask('generate_excel') })
+under: |
   ${ map_div }
 script: |
   ${ map_script }
-buttons:
-  - Restart: restart
+continue button field: display_grouped_data
 ---
 need: start_filter
 depends on: state_op, state_to_filter

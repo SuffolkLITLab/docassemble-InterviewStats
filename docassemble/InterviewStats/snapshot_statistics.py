@@ -14,7 +14,7 @@ def get_filenames():
 def get_summary_stats(filename: str):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
-        query = "select COUNT(modtime), MAX(modtime), MIN(modtime) from jsonstorage where filename=%(filename)s"
+        query = "select COUNT(modtime), MIN(modtime), MAX(modtime) from jsonstorage where filename=%(filename)s"
         cur.execute(query, {'filename': filename})
         val = cur.fetchone()
     conn.close()
