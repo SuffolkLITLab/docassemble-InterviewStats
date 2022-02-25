@@ -1,0 +1,85 @@
+metadata:
+  title: "TEST: Snapshot generator"
+---
+objects:
+  - users: ALPeopleList.using(ask_number=False,target_number=1)
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+modules:
+  - .generate_test_data
+  - .snapshot_statistics
+---
+imports:
+ - random
+---
+mandatory: True
+code: |
+  what_to_do
+  if what_to_do == 'generate':
+    number_of_data_points
+    # Edit your data here
+    ma_zips = ['01001', '01002', '02330', '02332', '02771', '027771',
+      '02125', '02122', '02124', '02123', '02115', '02116']
+    def my_generator():
+      for _ in range(number_of_data_points):
+        yield {'zip': random.choice(ma_zips), 'state': 'MA'}
+    write_random_user(my_generator())
+  elif what_to_do == 'delete':
+    which_to_delete
+    delete_data_from_interview(which_to_delete)
+  ending_screen
+---
+code: |
+  users[0].name.first = 'John'
+  users[0].name.last = 'Brown'
+  users[0].address
+---
+question: |
+  Snapshot Generator
+subquestion: |
+  This interview will create testing data and populate the DA variables snapshot with it.
+  Only proceed if you know what you are doing.
+fields:
+  - what to do?: what_to_do
+    datatype: dropdown
+    choices:
+      - Generate: generate
+      - Delete: delete
+---
+question: |
+  How many data points do you want to generate?
+fields:
+  - "number of data points to generate": number_of_data_points
+    datatype: integer
+    step: 10
+    min: 1
+    max: 400000
+---
+question: |
+  What interview do you want to delete all statistics from?
+fields:
+  - Filename: which_to_delete
+    datatype: combobox
+    code: |
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
+  - note: |
+      You need to confirm that you will be deleting **all** of the info from this interview.
+  - Confirm file: which_to_delete_confirm
+    datatype: text
+validation code: |
+  if which_to_delete_confirm != which_to_delete:
+    validation_error("Are you sure you are deleting the right one?")
+---
+event: ending_screen
+question: |
+  % if what_to_do == 'generate':
+  Added!
+  % else:
+  Deleted!
+  % endif
+subquestion: |
+  Go to the stats interview to see the data!
+buttons:
+  - restart

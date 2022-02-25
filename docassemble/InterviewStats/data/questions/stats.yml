@@ -1,17 +1,17 @@
 ---
 metadata:
   title: All Interview Statistics
-  short title: view stats
+  short title: View Stats
   temporary session: True
   required privileges:
     - admin
 ---
 features:
   javascript:
-    - https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js
-  question help button: True    
+    - https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js
+    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js
+  question help button: True
 ---
 default screen parts: 
   footer: |
@@ -28,21 +28,94 @@ id: interview order
 mandatory: True
 code: |
   filename
+  simple_data
   formatted_data
-  saved_data
   viewed_filtered
 ---
+event: generate_excel
 code: |
+  if stats_size > 10000:
+    if make_excel_task.ready():
+      if make_excel_task.failed():
+        show_failed_screen
+      show_excel_download
+    else:
+      waiting_screen
+  else:
+    proper_name = space_to_underscore(filename) + "_stats"
+    xlsx_output.initialize(filename=proper_name + ".xlsx")
+    writer = pd.ExcelWriter(xlsx_output.path(),
+      engine='xlsxwriter',
+      options={'remove_timezone': True})
+    formatted_data.to_excel(writer, index=False)
+    writer.save()
+    xlsx_output.commit()
+    del writer
+    show_excel_download
+    generate_excel = True
+---
+event: show_excel_download
+question: |
+  Excel Download
+subquestion: |
+  [:file-excel: Download](${ xlsx_output.url_for() })
+---
+code: |
+  make_excel_task = background_action('excel_task', data=formatted_data)
+---
+event: excel_task
+code: |
+  bg_data = action_argument('data')
   proper_name = space_to_underscore(filename) + "_stats"
   xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
     options={'remove_timezone': True})
-  formatted_data.to_excel(writer, index=False)
+  bg_data.to_excel(writer, index=False)
   writer.save()
   xlsx_output.commit()
   del writer
-  saved_data = True
+  background_response_action('excel_resp', the_excel=xlsx_output) 
+---
+event: waiting_screen
+id: waiting screen
+question: |
+  We're generating your excel sheet.
+subquestion: |
+  This may take a few minutes, so leave this tab open. Thanks for waiting.
+reload: True
+---
+event: show_failed_screen
+question: |
+  Sorry, something went wrong
+subquestion: |
+  We had some trouble trying to assemble your excel sheet.
+
+  ${ make_excel_task.result() }
+buttons:
+  - Restart: restart
+---
+event: excel_resp
+code: |
+  xlsx_output = action_argument('the_excel')
+  background_response()
+---
+code: |
+  summary_stats = get_summary_stats(filename)
+---
+reconsider: summary_stats
+question: |
+  Summary data for ${ interview_title }
+subquestion: |
+  * Total sessions: ${ summary_stats[0] }
+  * First session: ${ summary_stats[1] }
+  * Latest session: ${ summary_stats[2] }
+  
+  % if summary_stats[0] > 10000:
+  You have a lot of sessions; some operations might
+  take a long time.
+  % endif
+continue button field: simple_data
 ---
 code: |
   geo_layout = make_usage_map(formatted_data)
@@ -55,7 +128,7 @@ fields:
   - Filename: filename
     datatype: combobox
     code: |
-      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()]
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
 ---
 code: |
   interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
@@ -80,41 +153,35 @@ buttons:
 ---
 need: stats
 code: |
-  try:
-    first_row = next(iter(stats))
-    if first_row and isinstance(first_row, tuple) and isinstance(first_row[1], dict):
-      columns = list(first_row[1].keys())
-    state_list = set([row[1]['state'] for row in stats])
-  except Exception as ex:
-    log('Columns will be blank because of: {}, {}'.format(ex.args, ex))
-    columns = ['']
-    state_list = []
+  columns = get_columns(stats)
+  my_col = next(iter(columns), None)
+  groupable_columns = list(set(columns).difference(set(['modtime', 'user_session_id'])))
+  possible_states = get_column_values(stats, 'state')
 ---
 code: |
-  import operator
   import pandas as pd
 ---
 code: |
   formatted_data = pd.DataFrame()
+  stats_size = 0
   if stats is not None:
-    for stat in stats:
-      stat[1]['modtime'] = stat[0]
-    formatted_data = pd.DataFrame([stat[1] for stat in stats])
+    formatted_data = pd.DataFrame(stats)
+    stats_size = formatted_data.shape[0]
 ---
 mandatory: True
 id: view_data
 question: |
-  Stats for ${interview_title}: ${ len(stats) }
+  Stats for ${interview_title}
 subquestion: |
   Total submissions: ${ len(stats) }
 
   % if len(stats):
   Group by:
-  % for col in columns:
+  % for col in groupable_columns:
   [${col}](${ url_action('show_grouped_data', group_by = col ) }) |
   % endfor
 
-  [:file-excel: Download](${ xlsx_output.url_for() })
+  [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
   % endif
 under: |
   ${ map_div }
@@ -123,7 +190,7 @@ fields:
     datatype: yesno
     disable if:
       code: |
-        'state' not in formatted_data.columns or len(state_list) == 0
+        'state' not in formatted_data.columns or not possible_states
   - Find States that: state_op
     datatype: dropdown
     show if: filter_state
@@ -134,7 +201,7 @@ fields:
     datatype: dropdown
     show if: filter_state
     code: |
-      state_list
+      possible_states
   - Filter by Date: filter_date
     datatype: yesno
     disable if:
@@ -154,10 +221,11 @@ script: |
     ${ map_script}
 continue button field: start_filter
 continue button label: Filter
-help: |
-  ${ formatted_data.to_html() }
+#help: |
+#  ${ formatted_data.to_html() }
 ---
 mandatory: True
+event: viewed_filtered
 depends on: filt_map_script, filt_map_div
 need: filt_map_script, filt_map_div
 id: view_filtered_data
@@ -167,28 +235,31 @@ under: |
   ${ filt_map_div }
 script: |
     ${ filt_map_script }
-continue button field: viewed_filtered
-continue button label: Finish stats
 back button: True
 ---
 event: show_grouped_data
+code: |
+  my_col = action_argument('group_by')
+  force_ask('display_grouped_data')
+---
 question: |
-  Total submissions: ${ len(stats) }
+  Stats for ${interview_title}
 subquestion: |
+  Total submissions: ${ len(stats) }
+
   Group by:
-  % for col in columns:
+  % for col in groupable_columns:
   [${col}](${ url_action('show_grouped_data', group_by = col)  })
   % endfor
 
-  ${ formatted_data.groupby(by=action_argument('group_by')).count().to_html(classes=('table','table-striped')) }
+  ${ formatted_data.groupby(by=my_col).count().to_html(classes=('table','table-striped')) }
 
-  [:file-excel: Download](${ xlsx_output.url_for() })
-
+  [:file-excel: Download](${ url_ask('generate_excel') })
+under: |
   ${ map_div }
 script: |
   ${ map_script }
-buttons:
-  - Restart: restart
+continue button field: display_grouped_data
 ---
 need: start_filter
 depends on: state_op, state_to_filter

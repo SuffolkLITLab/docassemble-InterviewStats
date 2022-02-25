@@ -69,9 +69,7 @@ code: |
 code: |
   formatted_data = pd.DataFrame()
   if stats is not None:
-    for stat in stats:
-      stat[1]['modtime'] = stat[0]
-    formatted_data = pd.DataFrame([stat[1] for stat in stats])
+    formatted_data = pd.DataFrame(stats) 
 ---
 event: no_interview_stats
 question: There are no interviews to look for data in!
