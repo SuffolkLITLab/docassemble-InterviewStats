@@ -18,7 +18,7 @@ jobs:
         pip install
         build
         --user
-    - name:
+    - name: Check syntax for all files
       run: >-
         python -m
         compileall
