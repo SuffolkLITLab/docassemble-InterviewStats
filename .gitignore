@@ -1,3 +1,5 @@
 **/*.pyc
 .vscode/**
 docassemble/InterviewStats/data/sources/*.zip
+*.egg-info
+dist/**
