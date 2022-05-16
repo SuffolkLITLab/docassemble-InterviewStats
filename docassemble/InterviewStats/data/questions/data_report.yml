@@ -1,0 +1,366 @@
+---
+metadata:
+  title: All Interview Statistics - data report
+  short title: View Stats
+  temporary session: True
+#  required privileges: 
+#    - admin
+---
+features:
+  question help button: True
+  #question back button: True
+  css: 
+    - styles.css
+---
+default screen parts: 
+  footer: |
+    [:sync-alt: Restart](${ url_of('restart') } )
+---
+modules:
+  - .snapshot_statistics
+  - .data_report
+---
+objects:
+  - xlsx_output: DAFile.using(filename="stats.xlsx")
+#--------------------------------------------------------------------------
+#	Main logic
+#--------------------------------------------------------------------------
+---
+id: interview order
+mandatory: True
+code: |
+  filename # Choose interview for data report
+  simple_summary # Allow date filtering
+  excel_formatted_data # Prepare data for graph and excel   
+  final # Display download and filter options    
+#--------------------------------------------------------------------------
+#	Question screens
+#--------------------------------------------------------------------------
+---
+question: |
+  What interview do you want to view statistics for?
+fields:
+  - Filename: filename 
+    datatype: combobox
+    code: |
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] + get_filenames()
+#      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
+---
+question: |
+  Quick Summary for ${ interview_title }
+subquestion: |
+  * Total sessions: ${ summary_stats[0] }
+  * First session date: ${ format_date(summary_stats[1], format='MM/dd/yyyy') }
+  * Latest session date: ${ format_date(summary_stats[2], format='MM/dd/yyyy') }
+  
+  % if summary_stats[0] > 10000:
+  You have a lot of sessions; some operations might
+  take a long time.
+  % endif  
+  ---
+  Do you want to  filter your data records by date?
+fields:      
+  - no label: filter_date
+    datatype: yesnoradio
+    default: False
+    required: False
+  - Find submissions that are: date_op
+    datatype: dropdown
+    show if: filter_date
+    code: |
+      [{'gt': 'after'},
+       {'lt': 'before'},
+       {'eq': 'on'},
+       {'between': 'between'}]
+  - this date: begin_date
+    datatype: date
+    show if: filter_date
+  - and this date: end_date
+    datatype: date
+    js show if: |         
+      val('date_op') == 'between'
+continue button field: simple_summary
+---
+id: final screen
+event: final
+question: |
+  ${interview_title} - Data Reports
+subquestion: |
+  Total submissions: ${ len(stats) }
+  
+  % if filter_date:  
+    Date filter: Records date is ${phrase(date_op)} ${begin_date}
+  % if phrase(date_op) == 'between':
+    and ${end_date}
+  % endif
+    <br>Filtered submissions: ${ record_count }
+  % endif
+  
+  #### For multi-valued questions
+  % if len(col_headings_multi):
+  The following fields are from multi-valued questions. Select one to see its table:<br>
+  % for col in col_headings_multi:  
+  [${col}](${ url_action('show_filtered_data_multi', filter_by = col)  })
+  % endfor
+  % endif
+  
+  #### For single-valued questions
+  % if len(col_headings_single):
+  The following fields are from single-valued questions. Select one to see its table:<br>
+  % for col in col_headings_single:  
+  [${col}](${ url_action('show_filtered_data_single', filter_by = col)  })
+  % endfor
+  
+  #### For all questions
+  To see all results on the same screen, [click here](${ url_action('display_filtered_data_all')  }) 
+
+  #### Download an excel file:
+  To extract complete data, make an excel file:
+  [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
+  % endif
+---
+id: single-valued filtered screen
+question: |
+  Data Report - Single value questions
+subquestion: |
+  **Number of submissions**: ${ record_count }<br>
+  **Variable Name**: ${ my_col_single }<br> 
+  **Table Content**: Answer count / % of total submission<br>
+  :bell: Total percentage should be about 100% (±1% due to rounding).
+
+  ${ df_single[my_col_single].rename_axis("Answer").to_frame().query('index=='+my_index_single).to_html(classes=('table','table-striped')) }  
+continue button field: display_filtered_data_single
+continue button label: Back
+---  
+id: multi-valued filtered screen
+question: |
+  Data Report - Multi-choices questions
+subquestion: |
+  **Number of submissions**: ${ record_count }<br>
+  **Variable Name**: ${ my_col_multi }<br>
+  **Table Content**: Answer count / % of total submission<br>
+  :bell: Total percentage can be over or under 100%.
+  
+  ${ df_multi[my_col_multi].rename_axis("Answer").to_frame().query('index=='+my_index_multi).to_html(classes=('table','table-striped')) }    
+continue button field: display_filtered_data_multi
+continue button label: Back
+---  
+id: all_variables screen
+question: |
+  Data Report - All questions
+subquestion: |  
+  Number of submissions: ${ record_count }<br>
+  **Table Content**: Answer count / % of total submission<br>
+  :bell: For multi-valued questions, the total percentage can be over or under 100%; for single-valued questions, the total percentage should be about 100% (±1% due to rounding).
+  
+  #### Multi-value questions
+  % for fld in df_multi:
+    ${ df_multi[fld].rename_axis("Answer").to_frame().query('index=='+str(answer_list_multi[col_headings_multi.index(fld)])).to_html(classes=('table','table-striped')) }
+  % endfor  
+  
+  #### Single-value questions
+  % for fld in df_single:  
+    ${ df_single[fld].rename_axis("Answer").to_frame().query('index=='+str((answer_list_single[col_headings_single.index(fld)]))).to_html(classes=('table','table-striped')) }  
+  % endfor 
+continue button field: display_filtered_data_all
+continue button label: Back
+#--------------------------------------------------------------------------
+#	Data extract code blocks and screens
+#--------------------------------------------------------------------------
+---
+code: |
+  summary_stats = get_summary_stats(filename)
+---
+# Extract full data from database into stats
+code: |
+  if filename is not None:    
+    if 'data/questions' in filename or 'playground' in filename:      
+      stats = get_stats(filename)       
+    else:
+      stats = get_stats(filename.replace(':',':data/questions/'))
+  else:    
+    no_interview_stats 
+---
+event: no_interview_stats
+question: There are no interviews to look for data in!
+subquestion: |
+  There aren't any interviews that we can look for data in. There should be at least one interview
+  listed in the 'dispatch' section of the configuration. See
+  [the docassemble documentation](https://docassemble.org/docs/config.html#dispatch) for more information
+buttons:
+  - Exit: exit
+---
+code: |  
+  interview_title = stats[0]['title']
+---
+# Filter records in stats according to the filter
+code: |    
+  filtered_stats = list()
+  
+  # Build filtered_stats if filter_date is selected
+  if filter_date:
+    filter_begin = format_date(begin_date, format='MM/dd/yyyy')
+    if date_op == 'between':
+      filter_end = format_date(end_date, format='MM/dd/yyyy')    
+    for record in stats:
+      record_date = format_date(record['modtime'], format='MM/dd/yyyy')    
+      if (date_op == 'eq' and record_date == filter_begin) or (date_op == 'gt' and record_date > filter_begin) or (date_op == 'lt' and record_date < filter_begin) or (date_op == 'between' and record_date >= filter_begin and record_date < filter_end):
+        filtered_stats.append(record) 
+  
+  # In case a wrong date/date_op pair is selected
+  if filter_date and not filtered_stats:
+    no_filtered_stats
+---
+event: no_filtered_stats
+question: No records in this period
+subquestion: |
+  % if date_op == 'between':
+  You selected records "${phrase(date_op)} ${begin_date} and ${end_date}". 
+  % else:
+  You selected records "${phrase(date_op)} ${begin_date}".
+  % endif
+  There aren't any records fit your selection. 
+  
+  Try another date.
+back button: simple_summary
+---
+need: filtered_stats
+code: |  
+  # Process the filtered data records
+  columns = get_columns(stats)  
+  if filtered_stats:
+    table_data = processing_data(raw_data = filtered_stats, headings = columns) 
+    record_count = len(filtered_stats)
+  else:
+    record_count = len(stats)  
+    table_data = processing_data(raw_data = stats, headings = columns) 
+  
+  # Extract data for multi-valued questions
+  table_data_multi = table_data[0]
+  col_headings_multi = list(table_data[0].keys())
+  answer_list_multi = table_data[1]
+    
+  # Extract data for single-valued questions
+  table_data_single = table_data[2]
+  col_headings_single = list(table_data[2].keys())
+  
+  # Extract possible answers for single-valued questions  
+  answer_list_single = table_data[3]
+#--------------------------------------------------------------------------
+#	Pandas related code blocks
+#--------------------------------------------------------------------------
+---
+code: |
+  import pandas as pd
+---
+code: |  
+  excel_formatted_data = pd.DataFrame()
+  df_single = pd.DataFrame()
+  df_multi = pd.DataFrame()
+  stats_size = 0
+  if stats is not None:
+    excel_formatted_data = pd.DataFrame(stats)    
+    stats_size = excel_formatted_data.shape[0]
+    df_single = pd.DataFrame(table_data_single)
+    df_multi = pd.DataFrame(table_data_multi)
+---
+event: show_filtered_data_single
+code: |
+  # Receive user chosen field
+  my_col_single = action_argument('filter_by')  
+  
+  # Find the index of my_col_single, and use it to set my_index_single
+  my_row_single = col_headings_single.index(my_col_single)  
+  my_index_single = str(answer_list_single[my_row_single])
+  
+  # Display single-valued fields table screen
+  force_ask('display_filtered_data_single')
+---
+event: show_filtered_data_multi
+code: | 
+  # Receive user chosen field
+  my_col_multi = action_argument('filter_by')
+  
+  # Find the index of my_col_multi, and use it to set my_index_multi
+  my_row_multi = col_headings_multi.index(my_col_multi)  
+  my_index_multi = str(answer_list_multi[my_row_multi])
+  
+  # Display multi-valued fields table screen
+  force_ask('display_filtered_data_multi')  
+---
+code: |   
+  row_single = col_headings_single.index(fld)  
+  index_single = str(answer_list_single[row_single])  
+  
+  row_multi = col_headings_multi.index(fld)  
+  index_multi = str(answer_list_multi[row_multi])
+#--------------------------------------------------------------------------
+#	Excel related code blocks and screens
+#--------------------------------------------------------------------------
+---
+event: generate_excel
+code: |
+  if stats_size > 10000:
+    if make_excel_task.ready():
+      if make_excel_task.failed():
+        show_failed_screen
+      show_excel_download
+    else:
+      waiting_screen
+  else:
+    proper_name = space_to_underscore(filename) + "_stats"
+    xlsx_output.initialize(filename=proper_name + ".xlsx")
+    writer = pd.ExcelWriter(xlsx_output.path(),
+      engine='xlsxwriter',
+      options={'remove_timezone': True})
+    excel_formatted_data.to_excel(writer, index=False)
+    writer.save()
+    xlsx_output.commit()
+    del writer
+    show_excel_download
+---
+event: show_excel_download
+question: |
+  Excel Download
+subquestion: |
+  [:file-excel: Download](${ xlsx_output.url_for() })
+---
+code: |
+  make_excel_task = background_action('excel_task', data=excel_formatted_data)
+---
+event: excel_task
+code: |
+  bg_data = action_argument('data')
+  proper_name = space_to_underscore(filename) + "_stats"
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
+  writer = pd.ExcelWriter(xlsx_output.path(),
+    engine='xlsxwriter',
+    options={'remove_timezone': True})
+  bg_data.to_excel(writer, index=False)
+  writer.save()
+  xlsx_output.commit()
+  del writer
+  background_response_action('excel_resp', the_excel=xlsx_output) 
+---
+event: waiting_screen
+id: waiting screen
+question: |
+  We're generating your excel sheet.
+subquestion: |
+  This may take a few minutes, so leave this tab open. Thanks for waiting.
+reload: True
+---
+event: show_failed_screen
+question: |
+  Sorry, something went wrong
+subquestion: |
+  We had some trouble trying to assemble your excel sheet.
+
+  ${ make_excel_task.result() }
+buttons:
+  - Restart: restart
+---
+event: excel_resp
+code: |
+  xlsx_output = action_argument('the_excel')
+  background_response()

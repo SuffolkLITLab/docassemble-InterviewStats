@@ -3,8 +3,8 @@ metadata:
   title: All Interview Statistics
   short title: View Stats
   temporary session: True
-  required privileges:
-    - admin
+  #required privileges:
+  #  - admin
 ---
 features:
   javascript:

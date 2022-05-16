@@ -1,0 +1,109 @@
+metadata:
+  title: "TEST: Survey data generator"
+---
+objects:
+  - users: ALPeopleList.using(ask_number=False,target_number=1)
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+modules:
+  - .generate_test_data
+  - .snapshot_statistics
+  - .data_report
+#--------------------------------------------------------------------------
+#	Main logic
+#-------------------------------------------------------------------------- 
+---
+mandatory: True
+code: |  
+  what_to_do
+  if what_to_do == 'generate':
+    number_of_records    
+    saved_records
+  elif what_to_do == 'delete':
+    which_to_delete
+    delete_data_from_interview(which_to_delete)
+  ending_screen
+#--------------------------------------------------------------------------
+#	Question screens
+#--------------------------------------------------------------------------
+---
+question: |
+  Survey Testing Data Generator
+subquestion: |
+  This interview will create testing Survey data for developing the survey data report feature.
+  Only proceed if you know what you are doing.
+fields:
+  - what to do?: what_to_do
+    datatype: dropdown
+    choices:
+      - Generate: generate
+      - Delete: delete
+---
+question: |
+  How many data points do you want to generate?
+fields:
+  - "number of records to generate": number_of_records
+    datatype: integer
+    default: 10
+    step: 10
+    min: 1
+    max: 4000
+---
+question: |
+  Which survey interviews do you want to delete?
+fields:
+  - Filename: which_to_delete
+    datatype: combobox
+    code: |
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] + get_filenames()
+  - note: |
+      You need to confirm that you will be deleting **all** of the info from this interview.
+  - Confirm file: which_to_delete_confirm
+    datatype: text
+validation code: |
+  if which_to_delete_confirm != which_to_delete:
+    validation_error("Are you sure you are deleting the right one?")
+---
+event: ending_screen
+question: |
+  % if what_to_do == 'generate':
+  Added!
+  % else:
+  Deleted!
+  % endif
+subquestion: |
+  Go to the stats interview to see the data!
+buttons:
+  - restart
+#--------------------------------------------------------------------------
+#	Code blocks
+#--------------------------------------------------------------------------
+---
+code: |
+  import datetime
+  
+  # Edit your data here  
+  job = ['Agriculture', 'Crafts', 'Athlete', 'Professional', 'Teacher']  
+  weather = ['Sunny', 'Raining', 'High Wind']
+  country = ['US', 'Canada', 'Mexico', 'Egypt', 'India'] 
+  like_travel = ['True', 'False']
+  fruit = ['apple', 'pineapple', 'papaya', 'cherry', 'blueberry', 'grape']
+  
+  today = datetime.datetime.now()
+  tomorrow = today + datetime.timedelta(days=1)
+  next_week = today + datetime.timedelta(days=7)
+  next_month = today + datetime.timedelta(days=30)
+  record_date = [today, tomorrow, next_week, next_month]
+  
+  seed_list = {
+    'job': [job, 'radio'], 
+    'weather': [weather, 'radio'], 
+    'country': [country, 'checkboxes'],
+    'like_travel': [like_travel, 'yesno'],
+    'fruit': [fruit, 'multiselect']} 
+  
+  save_random_records(number_of_records, title='Random Records Generator', seed_data_list = seed_list, date_input=record_date)
+  
+  saved_records = True
