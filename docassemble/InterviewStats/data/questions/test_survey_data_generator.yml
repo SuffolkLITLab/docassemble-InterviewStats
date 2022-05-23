@@ -86,7 +86,7 @@ code: |
   
   # Edit your data here  
   job = ['Agriculture', 'Crafts', 'Athlete', 'Professional', 'Teacher']  
-  weather = ['Sunny', 'Raining', 'High Wind']
+  weather = ['Sunny', 'Raining', 'Windy']
   country = ['US', 'Canada', 'Mexico', 'Egypt', 'India'] 
   like_travel = ['True', 'False']
   fruit = ['apple', 'pineapple', 'papaya', 'cherry', 'blueberry', 'grape']

@@ -3,8 +3,8 @@ metadata:
   title: All Interview Statistics - data report
   short title: View Stats
   temporary session: True
-  required privileges: 
-    - admin
+  #required privileges: 
+  #  - admin
 ---
 features:
   question help button: True
@@ -43,7 +43,7 @@ fields:
   - Filename: filename 
     datatype: combobox
     code: |      
-      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] + get_filenames()
 ---
 question: |
   Quick Summary for ${ interview_title }
@@ -88,35 +88,35 @@ subquestion: |
   Total submissions: ${ len(stats) }
   
   % if filter_date:  
-    Date filter: Records date is ${phrase(date_op)} ${begin_date}
-  % if phrase(date_op) == 'between':
-    and ${end_date}
-  % endif
+    Date filter: Records dated ${phrase(date_op)} ${begin_date}
+    % if phrase(date_op) == 'between':
+      and ${end_date}
+    % endif
     <br>Filtered submissions: ${ record_count }
   % endif
-  
-  #### For multi-valued questions
-  % if len(col_headings_multi):
+    
+  % if have_multi_vars:
+  #### Multi-valued questions
   The following fields are from multi-valued questions. Select one to see its table:<br>
-  % for col in col_headings_multi:  
-  [${col}](${ url_action('show_filtered_data_multi', filter_by = col)  })
-  % endfor
+    % for col in col_headings_multi:  
+      [${col}](${ url_action('show_filtered_data_multi', filter_by = col)  })
+    % endfor
   % endif
   
-  #### For single-valued questions
-  % if len(col_headings_single):
+  % if have_single_vars:  
+  #### Single-valued questions (except text/area fields) 
   The following fields are from single-valued questions. Select one to see its table:<br>
-  % for col in col_headings_single:  
-  [${col}](${ url_action('show_filtered_data_single', filter_by = col)  })
-  % endfor
+    % for col in col_headings_single:  
+      [${col}](${ url_action('show_filtered_data_single', filter_by = col)  })
+    % endfor
+  % endif
   
-  #### For all questions
-  To see all results on the same screen, [click here](${ url_action('display_filtered_data_all')  }) 
+  #### All questions (except text/area fields)
+  [Click here](${ url_action('display_filtered_data_all')  }) to see all the question tables on one screen.
 
   #### Download an excel file:
-  To extract complete data, make an excel file:
+  To extract complete data including text fields, make an excel file:<br>
   [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
-  % endif
 ---
 id: single-valued filtered screen
 question: |
@@ -150,7 +150,7 @@ question: |
 subquestion: |  
   Number of submissions: ${ record_count }<br>
   **Table Content**: Answer count / % of total submission<br>
-  :bell: For multi-valued questions, the total percentage can be over or under 100%; for single-valued questions, the total percentage should be about 100% (±1% due to rounding).
+  :bell: For multi-valued questions, the total percentage can be over or under 100%; for single-valued questions, the total percentage should be about 100% (±0.5% due to rounding).
   
   #### Multi-value questions
   % for fld in df_multi:
@@ -235,16 +235,21 @@ code: |
     table_data = processing_data(raw_data = stats, headings = columns) 
   
   # Extract data for multi-valued questions
-  table_data_multi = table_data[0]
-  col_headings_multi = list(table_data[0].keys())
-  answer_list_multi = table_data[1]
+  have_multi_vars = False
+  if table_data[0]:
+    have_multi_vars = True
+    table_data_multi = table_data[0]
+    col_headings_multi = list(table_data[0].keys())
+    answer_list_multi = table_data[1]
     
   # Extract data for single-valued questions
-  table_data_single = table_data[2]
-  col_headings_single = list(table_data[2].keys())
-  
-  # Extract possible answers for single-valued questions  
-  answer_list_single = table_data[3]
+  have_single_vars = False
+  if table_data[2]:
+    have_single_vars = True
+    table_data_single = table_data[2]
+    col_headings_single = list(table_data[2].keys())  
+    # Extract possible answers for single-valued questions  
+    answer_list_single = table_data[3]
 #--------------------------------------------------------------------------
 #	Pandas related code blocks
 #--------------------------------------------------------------------------
@@ -260,8 +265,10 @@ code: |
   if stats is not None:
     excel_formatted_data = pd.DataFrame(stats)    
     stats_size = excel_formatted_data.shape[0]
-    df_single = pd.DataFrame(table_data_single)
-    df_multi = pd.DataFrame(table_data_multi)
+    if have_single_vars:
+      df_single = pd.DataFrame(table_data_single)
+    if have_multi_vars: 
+      df_multi = pd.DataFrame(table_data_multi)
 ---
 event: show_filtered_data_single
 code: |
@@ -298,7 +305,7 @@ code: |
 #--------------------------------------------------------------------------
 ---
 event: generate_excel
-code: |
+code: |  
   if stats_size > 10000:
     if make_excel_task.ready():
       if make_excel_task.failed():

@@ -27,7 +27,7 @@ def processing_data(raw_data=None, headings=None):
     # 1.2. Identify multi-valued type fields for graph, this is the list of original question variable names, not the flattened column headings in the database.
     multi_choices_fld_list = []
     for k, v in field_type_full_dict.items():
-      if v in ['checkboxes', 'combobox', 'multiselect', 'dropdown']:
+      if v in ['checkboxes', 'multiselect']:
         multi_choices_fld_list.append(k)      
     
     # 1.2.1 Set multi-valued headings to the database column headings (un-flatten them)
