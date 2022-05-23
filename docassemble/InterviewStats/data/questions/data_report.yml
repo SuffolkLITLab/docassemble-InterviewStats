@@ -3,8 +3,8 @@ metadata:
   title: All Interview Statistics - data report
   short title: View Stats
   temporary session: True
-  #required privileges: 
-  #  - admin
+  required privileges: 
+    - admin
 ---
 features:
   question help button: True
@@ -43,7 +43,7 @@ fields:
   - Filename: filename 
     datatype: combobox
     code: |      
-      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] + get_filenames()
+      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
 ---
 question: |
   Quick Summary for ${ interview_title }
