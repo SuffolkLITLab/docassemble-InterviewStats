@@ -38,7 +38,17 @@ code: |
 #--------------------------------------------------------------------------
 ---
 question: |
-  What interview do you want to view statistics for?
+  Data Reporting
+subquestion: |
+  **Prerequisites**: 
+  
+  1. You have a survey-type interview (i.e. interviews that only collect answers but don't have a download screen);  
+  1. you are using the [**save_input_data()**](https://github.com/SuffolkLITLab/docassemble-ALToolbox/blob/main/docassemble/ALToolbox/save_input_data.py) function in ALToolbox to capture the answers for data reporting purposes. ([See a demo](https://apps-dev.suffolklitlab.org/interview?i=docassemble.ALToolbox%3Adata%2Fquestions%2Fsave_input_data_demo.yml#page1) if you haven't used it before);  
+  1. your interview has been run successfully at least once.
+  
+  You can then use the **data reporting** feature here to pull your data records and make some quick on-screen data reports. In addition, you can download a complete data dump of the save data records in an Excel file, and use it to create more elaborated reports, for example.
+  
+  Select an interview to see data reports:
 fields:
   - Filename: filename 
     datatype: combobox
@@ -104,18 +114,18 @@ subquestion: |
   % endif
   
   % if have_single_vars:  
-  #### Single-valued questions (except text/area fields) 
+  #### Single-valued questions (excluding text/area fields) 
   The following fields are from single-valued questions. Select one to see its table:<br>
     % for col in col_headings_single:  
       [${col}](${ url_action('show_filtered_data_single', filter_by = col)  })
     % endfor
   % endif
   
-  #### All questions (except text/area fields)
+  #### All questions (excluding text/area fields)
   [Click here](${ url_action('display_filtered_data_all')  }) to see all the question tables on one screen.
 
   #### Download an excel file:
-  To extract complete data including text fields, make an excel file:<br>
+  To extract complete data including the text/area fields, make an excel file:<br>
   [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
 ---
 id: single-valued filtered screen
