@@ -1,7 +1,7 @@
 ---
 metadata:
-  title: All Interview Statistics - data report
-  short title: View Stats
+  title: Interview data reporting
+  short title: Data reporting
   temporary session: True
   required privileges: 
     - admin
@@ -43,10 +43,10 @@ subquestion: |
   **Prerequisites**: 
   
   1. You have a survey-type interview (i.e. interviews that only collect answers but don't have a download screen);  
-  1. you are using the [**save_input_data()**](https://github.com/SuffolkLITLab/docassemble-ALToolbox/blob/main/docassemble/ALToolbox/save_input_data.py) function in ALToolbox to capture the answers for data reporting purposes. ([See a demo](https://apps-dev.suffolklitlab.org/interview?i=docassemble.ALToolbox%3Adata%2Fquestions%2Fsave_input_data_demo.yml#page1) if you haven't used it before);  
+  1. you are using the `save_input_data()` function in ALToolbox to capture the answers for data reporting purposes. ([See a demo](https://apps-dev.suffolklitlab.org/interview?i=docassemble.ALToolbox%3Adata%2Fquestions%2Fsave_input_data_demo.yml#page1) if you haven't used it before);  
   1. your interview has been run successfully at least once.
   
-  You can then use the **data reporting** feature here to pull your data records and make some quick on-screen data reports. In addition, you can download a complete data dump of the save data records in an Excel file, and use it to create more elaborated reports, for example.
+  You can then use this `data reporting` feature to pull your data records and make some quick on-screen data reports. In addition, you can download a complete data dump of the saved data records into an Excel file, and use it to create charts, review free typed answers etc..
   
   Select an interview to see data reports:
 fields:
@@ -63,11 +63,10 @@ subquestion: |
   * Latest session date: ${ format_date(summary_stats[2], format='MM/dd/yyyy') }
   
   % if summary_stats[0] > 10000:
-  You have a lot of sessions; some operations might
-  take a long time.
+  You have a lot of sessions; some operations might take a long time.
   % endif  
   ---
-  Do you want to  filter your data records by date?
+  Do you want to filter your data records by date?
 fields:      
   - no label: filter_date
     datatype: yesnoradio
@@ -114,18 +113,20 @@ subquestion: |
   % endif
   
   % if have_single_vars:  
-  #### Single-valued questions (excluding text/area fields) 
-  The following fields are from single-valued questions. Select one to see its table:<br>
+  #### Single-valued questions (excluding text/area/numberic fields) 
+  The following fields are from single-valued questions, except those whose answer lack statistic value, such as user-typed answer or numeric input. 
+  
+  Select a field to see its table:<br>
     % for col in col_headings_single:  
       [${col}](${ url_action('show_filtered_data_single', filter_by = col)  })
     % endfor
   % endif
   
-  #### All questions (excluding text/area fields)
+  #### All questions (excluding text/area/number fields)
   [Click here](${ url_action('display_filtered_data_all')  }) to see all the question tables on one screen.
 
   #### Download an excel file:
-  To extract complete data including the text/area fields, make an excel file:<br>
+  To extract complete data including text/area/numeric fields, make an excel file:<br>
   [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
 ---
 id: single-valued filtered screen
@@ -135,7 +136,7 @@ subquestion: |
   **Number of submissions**: ${ record_count }<br>
   **Variable Name**: ${ my_col_single }<br> 
   **Table Content**: Answer count / % of total submission<br>
-  :bell: Total percentage should be about 100% (±1% due to rounding).
+  :bell: Total percentage should be about 100% (±0.5% due to rounding).
 
   ${ df_single[my_col_single].rename_axis("Answer").to_frame().query('index=='+my_index_single).to_html(classes=('table','table-striped')) }  
 continue button field: display_filtered_data_single
@@ -182,25 +183,47 @@ code: |
 ---
 # Extract full data from database into stats
 code: |
+  # Get stats using filename
   if filename is not None:    
     if 'data/questions' in filename or 'playground' in filename:      
       stats = get_stats(filename)       
     else:
-      stats = get_stats(filename.replace(':',':data/questions/'))
+      stats = get_stats(filename.replace(':',':data/questions/'))    
   else:    
     no_interview_stats 
+  
+  # Check if stats has data
+  if not stats:
+    no_interview_stats
+  else:      
+    # Check if stats is data-reporting ready - it must have a "title" column
+    if 'title' not in stats[0].keys():
+      no_reportable_data
 ---
 event: no_interview_stats
-question: There are no interviews to look for data in!
-subquestion: |
-  There aren't any interviews that we can look for data in. There should be at least one interview
-  listed in the 'dispatch' section of the configuration. See
-  [the docassemble documentation](https://docassemble.org/docs/config.html#dispatch) for more information
+question: Interview has no data!
+subquestion: |  
+  The interview you selected is <br>
+  ${interview_title}.
+  
+  This interview doesn't have any data. Try another one.  
 buttons:
-  - Exit: exit
+  - Restart: restart
+---
+event: no_reportable_data
+question: Interview has no reportable data, you should use Stats
+subquestion: | 
+  The interview you selected is <br>
+  ${interview_title}.
+  
+  This interview contains data not suitable for Data Reporting. You should use Stats.
+buttons:
+  - Restart: restart
 ---
 code: |  
-  interview_title = stats[0]['title']
+  interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
+  if stats and 'title' in stats[0].keys():
+    interview_title = stats[0]['title']   
 ---
 # Filter records in stats according to the filter
 code: |    

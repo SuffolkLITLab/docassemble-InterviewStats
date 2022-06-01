@@ -30,9 +30,10 @@ code: |
 #--------------------------------------------------------------------------
 ---
 question: |
-  Survey Testing Data Generator
+  Survey Data Generator
 subquestion: |
-  This interview will create testing Survey data for developing the survey data report feature.
+  This interview will create/delete testing data for the [data reporting](${interview_url(i=user_info().package + ":data_report.yml")}) feature in this repo, which is designed for survey type interviews.
+  
   Only proceed if you know what you are doing.
 fields:
   - what to do?: what_to_do
@@ -84,8 +85,8 @@ buttons:
 code: |
   import datetime
   
-  # Edit your data here  
-  job = ['Agriculture', 'Crafts', 'Athlete', 'Professional', 'Teacher']  
+  # Edit your data here    
+  color = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']  
   weather = ['Sunny', 'Raining', 'Windy']
   country = ['US', 'Canada', 'Mexico', 'Egypt', 'India'] 
   like_travel = ['True', 'False']
@@ -98,11 +99,11 @@ code: |
   record_date = [today, tomorrow, next_week, next_month]
   
   seed_list = {
-    'job': [job, 'radio'], 
-    'weather': [weather, 'radio'], 
+    'color': [color, 'radio'], 
+    'weather': [weather, 'dropdown'], 
     'country': [country, 'checkboxes'],
     'like_travel': [like_travel, 'yesno'],
-    'fruit': [fruit, 'multiselect']} 
+    'fruit': [fruit, 'multiselect']}
   
   save_random_records(number_of_records, title='Random Records Generator', seed_data_list = seed_list, date_input=record_date)
   

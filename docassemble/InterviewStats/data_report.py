@@ -35,10 +35,10 @@ def processing_data(raw_data=None, headings=None):
     for fld in multi_choices_fld_list:      
       multi_choices_heading_dict[fld] = [v for v in headings  if fld in v] #{fld: [fld_subkeys]}
     
-    # 1.3. Set single value field list - remove text fields and multi-valued fields from field_type_full_list
+    # 1.3. Set single value field list - remove text/numberic fields and multi-valued fields from field_type_full_list
     single_value_fld_list = list()
     for k, v in field_type_full_dict.items():
-      if v not in ['text', 'area'] and k not in multi_choices_fld_list:        
+      if v not in ['text', 'area', 'number', 'integer', 'currency'] and k not in multi_choices_fld_list:        
         single_value_fld_list.append(k)
     
     # 2. Build data dictionaries for tabular data arrays

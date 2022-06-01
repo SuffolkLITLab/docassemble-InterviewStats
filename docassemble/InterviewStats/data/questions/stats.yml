@@ -3,8 +3,8 @@ metadata:
   title: All Interview Statistics
   short title: View Stats
   temporary session: True
-  #required privileges:
-  #  - admin
+  required privileges:
+    - admin
 ---
 features:
   javascript:
@@ -27,10 +27,11 @@ objects:
 id: interview order
 mandatory: True
 code: |
+  intro
   filename
   simple_data
   formatted_data
-  viewed_filtered
+  viewed_filtered  
 ---
 event: generate_excel
 code: |
@@ -102,14 +103,18 @@ code: |
 ---
 code: |
   summary_stats = get_summary_stats(filename)
+      
+  # Kick out survey type interviews
+  if stats and 'title' in stats[0].keys():
+    not_for_maps
 ---
 reconsider: summary_stats
 question: |
   Summary data for ${ interview_title }
 subquestion: |
   * Total sessions: ${ summary_stats[0] }
-  * First session: ${ summary_stats[1] }
-  * Latest session: ${ summary_stats[2] }
+  * First session: ${ format_date(summary_stats[1], format='MM/dd/yyyy') }
+  * Latest session: ${ format_date(summary_stats[2], format='MM/dd/yyyy') }
   
   % if summary_stats[0] > 10000:
   You have a lot of sessions; some operations might
@@ -122,6 +127,21 @@ code: |
   map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
   del geo_layout
 ---
+question: Interview Statistics 
+subquestion: |      
+  We have two features in this repo:
+  
+  1. Stats - it generates statistics, maps, charts and a downadable excel file.
+      - If you have any inteview that uses `store_variables_snapshot(data={'zip': users[0].address.zip})` to save zip data, you should use Stats.
+      - You can filter your data by date or by state.
+      - Click the **Continue button** below to use this feature.
+  1. Data Reporting - it generates statistics tables and a downloadable excel file. 
+      - If you have any interview that uses `save_input_data()` to save reportable data, you should use Data Reporting.
+      - You can filter your data by date.
+      - [Click here to use Data Reporting](${interview_url(i=user_info().package + ":data_report.yml")}) 
+
+field: intro
+---
 question: |
   What interview do you want to view statistics for?
 fields:
@@ -132,6 +152,9 @@ fields:
 ---
 code: |
   interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
+  # A survey interview's title is saved in Stats, yet interview_title is used on Summary page which comes before we kick out survey interviews, so we set the value here.
+  if stats and 'title' in stats[0].keys():
+    interview_title = stats[0]['title']
 ---
 code: |
   if filename is not None:
@@ -141,6 +164,15 @@ code: |
       stats = get_stats(filename.replace(':',':data/questions/'))
   else:
     no_interview_stats
+---
+event: not_for_maps
+question: You should use Data Reporting feature, not Stats
+subquestion: | 
+  The interview you selected is ${interview_title}.
+  
+  This interview contains data not suitable for maps, you should use the data reporting feature in this repo.
+buttons:
+  - Restart: restart
 ---
 event: no_interview_stats
 question: There are no interviews to look for data in!
