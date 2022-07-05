@@ -39,7 +39,8 @@ code: |
 question: |
   Snapshot Generator
 subquestion: |
-  This interview will create testing data and populate the DA variables snapshot with it.
+  This interview will create testing data and populate the DA variables snapshot with it, useful for the [Interview Statistics (Stats)](${interview_url(i=user_info().package + ":stats.yml")}) feature in this repo.
+  
   Only proceed if you know what you are doing.
 fields:
   - what to do?: what_to_do
