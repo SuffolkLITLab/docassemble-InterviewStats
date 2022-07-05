@@ -5,6 +5,8 @@ metadata:
   temporary session: True
   required privileges:
     - admin
+    - developer
+    - stats_viewer
 ---
 features:
   javascript:
