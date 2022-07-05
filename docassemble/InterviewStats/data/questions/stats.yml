@@ -24,6 +24,10 @@ modules:
 objects:
   - xlsx_output: DAFile.using(filename="stats.xlsx")
 ---
+#mandatory: True
+code: |
+  message(get_filenames())
+---
 id: interview order
 mandatory: True
 code: |
@@ -138,16 +142,26 @@ subquestion: |
 
 field: intro
 ---
+code: |
+  overall_stats = get_overall_stats()
+---
 question: |
   What interview do you want to view statistics for?
+under: |
+  #### Summary statistics
+  
+  Total sessions with saved statistics across all interviews: ${ overall_stats[0] }
 fields:
   - Filename: filename
     datatype: combobox
     code: |
-      [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
+      get_combined_filename_list()
 ---
 code: |
-  interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), '(interview)')
+  try:
+    interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), filename)
+  except:
+    interview_title = filename
   # A survey interview's title is saved in Stats, yet interview_title is used on Summary page which comes before we kick out survey interviews, so we set the value here.
   if stats and 'title' in stats[0].keys():
     interview_title = stats[0]['title']
