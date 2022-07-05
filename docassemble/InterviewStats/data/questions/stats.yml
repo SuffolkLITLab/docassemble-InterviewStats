@@ -103,10 +103,6 @@ code: |
 ---
 code: |
   summary_stats = get_summary_stats(filename)
-      
-  # Kick out survey type interviews
-  if stats and 'title' in stats[0].keys():
-    not_for_maps
 ---
 reconsider: summary_stats
 question: |
@@ -164,15 +160,6 @@ code: |
       stats = get_stats(filename.replace(':',':data/questions/'))
   else:
     no_interview_stats
----
-event: not_for_maps
-question: You should use Data Reporting feature, not Stats
-subquestion: | 
-  The interview you selected is ${interview_title}.
-  
-  This interview contains data not suitable for maps, you should use the data reporting feature in this repo.
-buttons:
-  - Restart: restart
 ---
 event: no_interview_stats
 question: There are no interviews to look for data in!
