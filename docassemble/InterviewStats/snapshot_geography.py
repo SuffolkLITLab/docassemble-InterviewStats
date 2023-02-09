@@ -101,7 +101,11 @@ def make_bokeh_map(geosource, geo_loc_counts, col_name: str='zip'):
     # Settled on brewer for colors: https://colorbrewer2.org
     # Was considering `colorcet`, but https://arxiv.org/pdf/1509.03700v1.pdf says stick with brewer
     palette = list(reversed(brewer['YlGnBu'][5]))  # Gets yellow as low and blue as high
-    max_val = max(geo_loc_counts[col_name + '_counts'])
+    vals = geo_loc_counts[col_name + '_counts']
+    if vals.empty:
+        max_val = 10
+    else:
+        max_val = max(vals)
     color_mapper = LinearColorMapper(palette=palette, low=0, high=max_val)
     map_plot.patches('xs', 'ys', source=geosource,
                      fill_color={'field': col_name + '_counts', 'transform': color_mapper},
