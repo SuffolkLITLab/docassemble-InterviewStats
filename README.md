@@ -1,5 +1,7 @@
 # docassemble.InterviewStats
 
+[![PyPI version](https://badge.fury.io/py/docassemble.InterviewStats.svg)](https://badge.fury.io/py/docassemble.InterviewStats)
+
 A docassemble interview that lets you view statistics from other saved interview responses. 
 
 ## Getting Started
