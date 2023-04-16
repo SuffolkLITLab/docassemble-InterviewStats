@@ -60,6 +60,10 @@ def get_stats(filename: str, column:str=None):
             record[1]['modtime'] = record[0]
             record[1]['user_session_id'] = record[2]
             record[1]['user_defined_tags'] = record[3]
+            
+            # Remove auto_title which typically contains the user's name if interview has progressed far enough
+            if "auto_title" in record[1]:
+                del record[1]["auto_title"]
             if column:
                 if column in record[1]:
                     records.append(record[1][column])
