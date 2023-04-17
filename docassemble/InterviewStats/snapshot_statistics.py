@@ -52,14 +52,13 @@ def get_stats(filename: str, column:str=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         # use a parameterized query to prevent SQL injection
-        query = "select modtime, data, key, tags from jsonstorage where filename=%(filename)s"
+        query = "select modtime, data, tags from jsonstorage where filename=%(filename)s"
         cur.execute(query, {'filename': filename})
         records = list()
         for record in cur:
             # Add modtime to the all stats
             record[1]['modtime'] = record[0]
-            record[1]['user_session_id'] = record[2]
-            record[1]['user_defined_tags'] = record[3]
+            record[1]['user_defined_tags'] = record[2]
             if column:
                 if column in record[1]:
                     records.append(record[1][column])
