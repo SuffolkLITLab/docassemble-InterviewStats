@@ -190,7 +190,7 @@ need: stats
 code: |
   columns = get_columns(stats)
   my_col = next(iter(columns), None)
-  groupable_columns = list(set(columns).difference(set(['modtime', 'user_session_id'])))
+  groupable_columns = list(set(columns).difference(set(['modtime'])))
   possible_states = get_column_values(stats, 'state')
 ---
 code: |
