@@ -6,7 +6,7 @@ __all__ = ['get_filenames', 'get_summary_stats', 'get_stats', 'get_columns', 'ge
 def get_filenames():
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
-        query = "select DISTINCT(filename) as filename from jsonstorage WHERE tags is null or tags != 'metadata'"
+        query = "SELECT DISTINCT(filename) AS filename FROM jsonstorage WHERE tags IS DISTINCT FROM 'metadata'"
         cur.execute(query)
         results = [record for record in cur]
     conn.close()
@@ -31,7 +31,15 @@ def get_combined_filename_list():
 def get_summary_stats(filename: str):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
-        query = "select COUNT(modtime), MIN(modtime), MAX(modtime) from jsonstorage where filename=%(filename)s"
+        query = """SELECT 
+                    COUNT(modtime), 
+                    MIN(modtime), 
+                    MAX(modtime) 
+                    FROM jsonstorage 
+                    WHERE filename=%(filename)s 
+                    AND 
+                    tags IS DISTINCT FROM 'metadata'
+                """
         cur.execute(query, {'filename': filename})
         val = cur.fetchone()
     conn.close()
@@ -41,7 +49,7 @@ def get_summary_stats(filename: str):
 def get_overall_stats():
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
-        query = "select COUNT(modtime), MIN(modtime), MAX(modtime) from jsonstorage where tags is null OR tags != 'metadata'"
+        query = "SELECT COUNT(modtime), MIN(modtime), MAX(modtime) FROM jsonstorage WHERE tags IS DISTINCT FROM 'metadata'"
         cur.execute(query)
         val = cur.fetchone()
     conn.close()
@@ -52,13 +60,25 @@ def get_stats(filename: str, column:str=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         # use a parameterized query to prevent SQL injection
-        query = "select modtime, data, tags from jsonstorage where filename=%(filename)s"
+        # Always filter out `metadata` tag because it's used by AssemblyLine to store
+        # things like the interview title (which can have user's name).
+        # using the tag for anything else isn't something we've commonly seen in the wild
+        query = """SELECT 
+                   modtime, 
+                   data, 
+                   tags 
+                   FROM jsonstorage 
+                   WHERE filename=%(filename)s
+                   AND 
+                   tags IS DISTINCT FROM 'metadata'"""
         cur.execute(query, {'filename': filename})
         records = list()
         for record in cur:
             # Add modtime to the all stats
             record[1]['modtime'] = record[0]
-            record[1]['user_defined_tags'] = record[2]
+            # Note that this is normally empty or 'metadata'
+            # in store_variables_snapshot() this is the `key` parameter
+            record[1]['tags'] = record[2]
             if column:
                 if column in record[1]:
                     records.append(record[1][column])
