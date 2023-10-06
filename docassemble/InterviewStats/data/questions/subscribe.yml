@@ -85,9 +85,9 @@ code: |
   xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
-    engine_kwargs={'remove_timezone': True})
+    engine_kwargs={'options': {'remove_timezone': True}})
   formatted_data.to_excel(writer, index=False)
-  writer.save()
+  writer.close()
   xlsx_output.commit()
   del writer
   saved_data = True
