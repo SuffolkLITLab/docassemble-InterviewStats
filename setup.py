@@ -53,7 +53,7 @@ setup(name='docassemble.InterviewStats',
       url='https://courtformsonline.org/about/',
       packages=find_packages(),
       namespace_packages=['docassemble'],
-      install_requires=['bokeh>=2.4.2', 'cenpy>=1.0.0.post4', 'geopandas>=0.9.0', 'numpy>=1.0.4', 'pandas>=1.4.2', 'requests>=2.27.1'],
+      install_requires=['bokeh>=2.4.2', 'cenpy>=1.0.0.post4', 'geopandas>=0.9.0', 'numpy>=1.0.4,<2.0.0', 'pandas>=1.4.2', 'requests>=2.27.1'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/InterviewStats/', package='docassemble.InterviewStats'),
      )
