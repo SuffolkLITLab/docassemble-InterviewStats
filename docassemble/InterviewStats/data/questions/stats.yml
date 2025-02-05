@@ -9,11 +9,12 @@ metadata:
     - stats_viewer
 ---
 features:
-  javascript:
-    - https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js
-    - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js
+  # javascript:
+  #   - https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.min.js
+  #   - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js
+  #   - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js
   question help button: True
+  question back button: True
 ---
 default screen parts: 
   footer: |
@@ -21,7 +22,7 @@ default screen parts:
 ---
 modules:
   - .snapshot_statistics
-  - .snapshot_geography
+  # - .snapshot_geography
 ---
 objects:
   - xlsx_output: DAFile.using(filename="stats.xlsx")
@@ -33,11 +34,12 @@ code: |
 id: interview order
 mandatory: True
 code: |
-  intro
+  # intro
   filename
   simple_data
   formatted_data
-  viewed_filtered  
+  display_grouped_data
+  # viewed_filtered  
 ---
 event: generate_excel
 code: |
@@ -123,26 +125,26 @@ subquestion: |
   take a long time.
   % endif
 continue button field: simple_data
+# ---
+# code: |
+#   geo_layout = make_usage_map(formatted_data)
+#   map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
+#   del geo_layout
 ---
-code: |
-  geo_layout = make_usage_map(formatted_data)
-  map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
-  del geo_layout
----
-question: Interview Statistics 
-subquestion: |      
-  We have two features in this repo:
+# question: Interview Statistics 
+# subquestion: |      
+#   We have two features in this repo:
   
-  1. Stats - it generates statistics, maps, charts and a downadable excel file.
-      - If you have any inteview that uses `store_variables_snapshot(data={'zip': users[0].address.zip})` to save zip data, you should use Stats.
-      - You can filter your data by date or by state.
-      - Click the **Continue button** below to use this feature.
-  1. Data Reporting - it generates statistics tables and a downloadable excel file. 
-      - If you have any interview that uses `save_input_data()` to save reportable data, you should use Data Reporting.
-      - You can filter your data by date.
-      - [Click here to use Data Reporting](${interview_url(i=user_info().package + ":data_report.yml")}) 
+#   1. Stats - it generates statistics, maps, charts and a downadable excel file.
+#       - If you have any inteview that uses `store_variables_snapshot(data={'zip': users[0].address.zip})` to save zip data, you should use Stats.
+#       - You can filter your data by date or by state.
+#       - Click the **Continue button** below to use this feature.
+#   1. Data Reporting - it generates statistics tables and a downloadable excel file. 
+#       - If you have any interview that uses `save_input_data()` to save reportable data, you should use Data Reporting.
+#       - You can filter your data by date.
+#       - [Click here to use Data Reporting](${interview_url(i=user_info().package + ":data_report.yml")}) 
 
-field: intro
+# field: intro
 ---
 code: |
   overall_stats = get_overall_stats()
@@ -203,7 +205,7 @@ code: |
     formatted_data = pd.DataFrame(stats)
     stats_size = formatted_data.shape[0]
 ---
-mandatory: True
+# mandatory: True
 id: view_data
 question: |
   Stats for ${interview_title}
@@ -218,8 +220,8 @@ subquestion: |
 
   [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
   % endif
-under: |
-  ${ map_div }
+# under: |
+#   ${ map_div }
 fields:
   - Filter State: filter_state
     datatype: yesno
@@ -252,25 +254,25 @@ fields:
   - this date: date_to_filter
     datatype: date
     show if: filter_date
-script: |
-    ${ map_script}
+# script: |
+#     ${ map_script}
 continue button field: start_filter
 continue button label: Filter
 #help: |
 #  ${ formatted_data.to_html() }
----
-mandatory: True
-event: viewed_filtered
-depends on: filt_map_script, filt_map_div
-need: filt_map_script, filt_map_div
-id: view_filtered_data
-question: |
-  Filtered: ${ filter_description }
-under: |
-  ${ filt_map_div }
-script: |
-    ${ filt_map_script }
-back button: True
+# ---
+# mandatory: True
+# event: viewed_filtered
+# depends on: filt_map_script, filt_map_div
+# need: filt_map_script, filt_map_div
+# id: view_filtered_data
+# question: |
+#   Filtered: ${ filter_description }
+# under: |
+#   ${ filt_map_div }
+# script: |
+#     ${ filt_map_script }
+# back button: True
 ---
 event: show_grouped_data
 code: |
@@ -290,29 +292,29 @@ subquestion: |
   ${ formatted_data.groupby(by=my_col).count().to_html(classes=('table','table-striped')) }
 
   [:file-excel: Download](${ url_ask('generate_excel') })
-under: |
-  ${ map_div }
-script: |
-  ${ map_script }
-continue button field: display_grouped_data
----
-need: start_filter
-depends on: state_op, state_to_filter
-code: |
-  filter_list = []
-  readable = {'state': 'State', 'modtime': 'Date',
-              'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
-  if defined('filter_state') and filter_state:
-    filter_list.append(('state', state_op, state_to_filter))
-  if defined('filter_date') and filter_date:
-    date_to_filter = date_to_filter.replace(tzinfo=None)
-    filter_list.append(('modtime', date_op, date_to_filter))
+# under: |
+#   ${ map_div }
+# script: |
+#   ${ map_script }
+event: display_grouped_data
+# ---
+# need: start_filter
+# depends on: state_op, state_to_filter
+# code: |
+#   filter_list = []
+#   readable = {'state': 'State', 'modtime': 'Date',
+#               'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
+#   if defined('filter_state') and filter_state:
+#     filter_list.append(('state', state_op, state_to_filter))
+#   if defined('filter_date') and filter_date:
+#     date_to_filter = date_to_filter.replace(tzinfo=None)
+#     filter_list.append(('modtime', date_op, date_to_filter))
 
-  filter_description = ' and '.join(
-      ['{} {} {}'.format(readable[elem[0]], readable[elem[1]], elem[2])
-       for elem in filter_list])
-  filters = get_filters_from_strings(filter_list)
-  filt_geo_layout = make_usage_map(formatted_data, geo_col='zip',
-                                   time_col='modtime', filters=filters)
-  filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
-  del filt_geo_layout
+#   filter_description = ' and '.join(
+#       ['{} {} {}'.format(readable[elem[0]], readable[elem[1]], elem[2])
+#        for elem in filter_list])
+#   filters = get_filters_from_strings(filter_list)
+#   # filt_geo_layout = make_usage_map(formatted_data, geo_col='zip',
+#   #                                  time_col='modtime', filters=filters)
+#   # filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
+#   # del filt_geo_layout
