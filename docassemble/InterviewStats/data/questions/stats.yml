@@ -9,10 +9,8 @@ metadata:
     - stats_viewer
 ---
 features:
-  # javascript:
-  #   - https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.min.js
-  #   - https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js
-  #   - https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js
+  javascript:
+    - sortable.min.js
   question help button: True
   question back button: True
 ---
@@ -148,6 +146,7 @@ continue button field: simple_data
 ---
 code: |
   overall_stats = get_overall_stats()
+  summary_by_filename = get_summary_stats_by_filename()
 ---
 question: |
   What interview do you want to view statistics for?
@@ -155,6 +154,81 @@ under: |
   #### Summary statistics
   
   Total sessions with saved statistics across all interviews: ${ overall_stats[0] }
+  
+  % if summary_by_filename:
+  <style>
+    /* Small improvements for the summary table */
+    #summary-table { width: 100%; border-collapse: collapse; }
+    #summary-table th { background: #f8f9fa; padding: 8px; text-align: left; }
+    #summary-table td { padding: 8px; vertical-align: top; }
+    #summary-table th[data-sort="asc"]::after { content: " \25B2"; }
+    #summary-table th[data-sort="desc"]::after { content: " \25BC"; }
+    #summary-table th { cursor: pointer; }
+    .short-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: 20ch; }
+    .hidden-row { display: none; }
+  </style>
+
+  <table id="summary-table" class="table table-striped table-bordered sortable">
+    <thead>
+      <tr>
+        <th>Interview</th>
+        <th data-type="number">30 days</th>
+        <th data-type="number">90 days</th>
+        <th data-type="number">365 days</th>
+        <th data-type="number">All time</th>
+        <th data-type="date">Last (30d)</th>
+        <th data-type="date">Latest</th>
+      </tr>
+    </thead>
+    <tbody>
+    % for row in summary_by_filename:
+      <tr>
+        <td title="${ row['filename'] }"><span class="short-name">${ shorten_filename(row['filename']) }</span></td>
+        <td>${ row.get('count_30d', 0) }</td>
+        <td>${ row.get('count_90d', 0) }</td>
+        <td>${ row.get('count_365d', 0) }</td>
+        <td>${ row.get('count_all', 0) }</td>
+        <td>${ format_date(row.get('max_30d'), format='MM/dd/yyyy') if row.get('max_30d') else '' }</td>
+        <td>${ format_date(row.get('max_all'), format='MM/dd/yyyy') if row.get('max_all') else '' }</td>
+      </tr>
+    % endfor
+    </tbody>
+  </table>
+  <div style="margin-top: 0.5rem;">
+    <button id="show-more-btn" class="btn btn-secondary" type="button">Show more</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      var table = document.getElementById('summary-table');
+      if(!table) return;
+      var tbody = table.tBodies[0];
+      if(!tbody) return;
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+      var limit = 50;
+      if(rows.length <= limit){
+        var btn = document.getElementById('show-more-btn');
+        if(btn) btn.style.display = 'none';
+        return;
+      }
+      // Hide rows beyond limit
+      rows.forEach(function(r, idx){
+        if(idx >= limit) r.classList.add('hidden-row');
+      });
+      var btn = document.getElementById('show-more-btn');
+      var showingAll = false;
+      btn.addEventListener('click', function(){
+        showingAll = !showingAll;
+        rows.forEach(function(r, idx){
+          if(idx >= limit){
+            r.classList.toggle('hidden-row', !showingAll);
+          }
+        });
+        btn.textContent = showingAll ? 'Show less' : 'Show more';
+      });
+    });
+  </script>
+  % endif
 fields:
   - Filename: filename
     datatype: combobox
