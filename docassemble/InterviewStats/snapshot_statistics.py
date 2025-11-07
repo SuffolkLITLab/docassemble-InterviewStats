@@ -1,7 +1,7 @@
 from docassemble.base.util import variables_snapshot_connection, interview_menu
 from typing import List
 
-__all__ = ['get_filenames', 'get_summary_stats', 'get_stats', 'get_columns', 'get_column_values', 'get_combined_filename_list', "get_overall_stats", "get_summary_stats_by_filename", 'shorten_filename']
+__all__ = ['get_filenames', 'get_summary_stats', 'get_stats', 'get_columns', 'get_column_values', 'get_combined_filename_list', "get_overall_stats", "get_summary_stats_by_filename", 'shorten_filename', 'get_session_summary_stats_by_filename', 'get_session_overall_stats']
 
 def get_filenames():
     conn = variables_snapshot_connection()
@@ -192,4 +192,100 @@ def get_column_values(records, column) -> set:
     if not records or not column:
         return []
     return set([record.get(column) for record in records])
+    
+
+def get_session_summary_stats_by_filename(filter_step1: bool = True):
+    """Return session-based summary stats grouped by filename.
+
+    Uses userdict (all sessions), selecting the most recent modtime per session key,
+    and optionally filtering out sessions that only have a single entry (step 1 only).
+
+    Returns list of dicts with keys: filename, count_30d, min_30d, max_30d,
+    count_90d, min_90d, max_90d, count_365d, min_365d, max_365d,
+    count_all, min_all, max_all.
+    """
+    query = """
+    WITH keyed AS (
+        SELECT key, MAX(modtime) AS modtime, COUNT(*) AS num_rows
+        FROM userdict
+        GROUP BY key
+    ), mostrecent AS (
+        SELECT key, modtime
+        FROM keyed
+        WHERE (num_rows > 1) OR (%(filter_step1)s = FALSE)
+    ), latest AS (
+        SELECT u.filename, m.modtime
+        FROM userdict u
+        JOIN mostrecent m ON m.key = u.key AND m.modtime = u.modtime
+    )
+    SELECT 
+        filename,
+        COUNT(*) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS count_30d,
+        MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS min_30d,
+        MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS max_30d,
+        COUNT(*) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS count_90d,
+        MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS min_90d,
+        MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS max_90d,
+        COUNT(*) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS count_365d,
+        MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS min_365d,
+        MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS max_365d,
+        COUNT(*) AS count_all,
+        MIN(modtime) AS min_all,
+        MAX(modtime) AS max_all
+    FROM latest
+    GROUP BY filename
+    ORDER BY count_30d DESC, count_90d DESC, count_365d DESC
+    """
+
+    conn = variables_snapshot_connection()
+    try:
+        try:
+            result = conn.execute(query, {'filter_step1': filter_step1})
+        except Exception:
+            result = None
+
+        if result is not None and hasattr(result, 'mappings'):
+            rows = list(result.mappings())
+            results = [dict(r) for r in rows]
+        else:
+            with conn.cursor() as cur:
+                cur.execute(query, {'filter_step1': filter_step1})
+                rows = cur.fetchall()
+                cols = [d[0] for d in cur.description]
+            results = [dict(zip(cols, row)) for row in rows]
+    finally:
+        conn.close()
+
+    for r in results:
+        for key in ('count_30d', 'count_90d', 'count_365d', 'count_all'):
+            if r.get(key) is None:
+                r[key] = 0
+    return results
+
+
+def get_session_overall_stats(filter_step1: bool = True):
+    """Return overall session stats (count, min, max modtime) across all filenames."""
+    query = """
+    WITH keyed AS (
+        SELECT key, MAX(modtime) AS modtime, COUNT(*) AS num_rows
+        FROM userdict
+        GROUP BY key
+    ), mostrecent AS (
+        SELECT key, modtime
+        FROM keyed
+        WHERE (num_rows > 1) OR (%(filter_step1)s = FALSE)
+    )
+    SELECT 
+        COUNT(*) AS count_all,
+        MIN(modtime) AS min_all,
+        MAX(modtime) AS max_all
+    FROM mostrecent
+    """
+
+    conn = variables_snapshot_connection()
+    with conn.cursor() as cur:
+        cur.execute(query, {'filter_step1': filter_step1})
+        val = cur.fetchone()
+    conn.close()
+    return val
     

@@ -86,6 +86,36 @@ code: |
   del writer
   background_response_action('excel_resp', the_excel=xlsx_output) 
 ---
+event: generate_summary_excel
+code: |
+  import pandas as pd
+  proper_name = 'snapshot_summary'
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
+  df = pd.DataFrame(summary_by_filename)
+  writer = pd.ExcelWriter(xlsx_output.path(),
+    engine='xlsxwriter',
+    engine_kwargs={'options': {'remove_timezone': True}})
+  df.to_excel(writer, index=False)
+  writer.close()
+  xlsx_output.commit()
+  del writer
+  show_excel_download
+---
+event: generate_sessions_excel
+code: |
+  import pandas as pd
+  proper_name = 'sessions_summary'
+  xlsx_output.initialize(filename=proper_name + ".xlsx")
+  df = pd.DataFrame(session_summary_by_filename)
+  writer = pd.ExcelWriter(xlsx_output.path(),
+    engine='xlsxwriter',
+    engine_kwargs={'options': {'remove_timezone': True}})
+  df.to_excel(writer, index=False)
+  writer.close()
+  xlsx_output.commit()
+  del writer
+  show_excel_download
+---
 event: waiting_screen
 id: waiting screen
 question: |
@@ -149,15 +179,40 @@ continue button field: simple_data
 code: |
   overall_stats = get_overall_stats()
   summary_by_filename = get_summary_stats_by_filename()
+  session_overall_stats = get_session_overall_stats()
+  session_summary_by_filename = get_session_summary_stats_by_filename()
 ---
 question: |
   What interview do you want to view statistics for?
 under: |
   #### Summary statistics
   
+  Keep in mind:
+  Docassemble sessions typically are kept for only 90 days. Snapshotted sessions
+  may or may not be set to be kept longer. Statistics below will reflect the settings
+  on your server and interviews.
+
   Total sessions with saved statistics across all interviews: ${ overall_stats[0] }
   
+  <div class="stats-tabs">
+    <ul class="nav nav-tabs" id="stats-tabs">
+      <li class="nav-item">
+        <a href="#" class="nav-link active" id="snapshots-tab">Snapshots</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link" id="sessions-tab">All sessions</a>
+      </li>
+    </ul>
+  </div>
+
   % if summary_by_filename:
+  <div id="snapshots-panel">
+  <div style="margin-bottom:0.5rem">
+    <a href="${ url_ask('generate_summary_excel') }" class="btn btn-link">
+      <i class="fa fa-file-excel" aria-hidden="true"></i>
+      Download snapshot summary
+    </a>
+  </div>
   <h2 class="h4">Snapshotted sessions by interview title</h2>
   <table id="summary-table" class="table table-striped table-bordered sortable">
     <thead>
@@ -185,11 +240,46 @@ under: |
     % endfor
     </tbody>
   </table>
-  <div style="margin-top: 0.5rem;">
-    <button id="show-more-btn" class="btn btn-secondary" type="button">Show more</button>
   </div>
 
   
+  % endif
+  % if session_summary_by_filename:
+  <div id="sessions-panel" style="display:none;">
+  <div style="margin-bottom:0.5rem">
+    <a href="${ url_ask('generate_sessions_excel') }" class="btn btn-link">
+      <i class="fa fa-file-excel" aria-hidden="true"></i>
+      Download session summary
+    </a>
+  </div>
+  <h2 class="h4">All sessions by interview title</h2>
+  <table id="sessions-table" class="table table-striped table-bordered sortable">
+    <thead>
+      <tr>
+        <th>Interview</th>
+        <th data-type="number">30 days</th>
+        <th data-type="number">90 days</th>
+        <th data-type="number">365 days</th>
+        <th data-type="number">All time</th>
+        <th data-type="date">Last (30d)</th>
+        <th data-type="date">Latest</th>
+      </tr>
+    </thead>
+    <tbody>
+    % for row in session_summary_by_filename:
+      <tr>
+        <td title="${ row['filename'] }"><span class="short-name">${ shorten_filename(row['filename']) }</span></td>
+        <td>${ row.get('count_30d', 0) }</td>
+        <td>${ row.get('count_90d', 0) }</td>
+        <td>${ row.get('count_365d', 0) }</td>
+        <td>${ row.get('count_all', 0) }</td>
+        <td>${ format_date(row.get('max_30d'), format='MM/dd/yyyy') if row.get('max_30d') else '' }</td>
+        <td>${ format_date(row.get('max_all'), format='MM/dd/yyyy') if row.get('max_all') else '' }</td>
+      </tr>
+    % endfor
+    </tbody>
+  </table>
+  </div>
   % endif
 fields:
   - Filename: filename

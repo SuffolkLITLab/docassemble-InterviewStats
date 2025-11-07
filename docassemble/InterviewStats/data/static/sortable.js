@@ -50,25 +50,30 @@
   }
 
 
-  function runShowMore(limit){
-    var table = document.getElementById('summary-table');
-    if(!table) return;
-    var tbody = table.tBodies[0];
-    if(!tbody) return;
-    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-    if(rows.length <= limit){
-      var btn = document.getElementById('show-more-btn');
-      if(btn) btn.style.display = 'none';
-      return;
+  function setupTabs(){
+    var snapTab = document.getElementById('snapshots-tab');
+    var sessTab = document.getElementById('sessions-tab');
+    var snapPanel = document.getElementById('snapshots-panel');
+    var sessPanel = document.getElementById('sessions-panel');
+    if(!snapTab || !sessTab || !snapPanel || !sessPanel) return;
+    if(!snapTab._daTabAttached){
+      snapTab._daTabAttached = true;
+      snapTab.addEventListener('click', function(e){
+        e.preventDefault();
+        snapTab.classList.add('active');
+        sessTab.classList.remove('active');
+        snapPanel.style.display = '';
+        sessPanel.style.display = 'none';
+      });
     }
-    rows.forEach(function(r, idx){ if(idx >= limit) r.classList.add('hidden-row'); });
-    var btn = document.getElementById('show-more-btn');
-    var showingAll = false;
-    if(btn){
-      btn.addEventListener('click', function(){
-        showingAll = !showingAll;
-        rows.forEach(function(r, idx){ if(idx >= limit){ r.classList.toggle('hidden-row', !showingAll); } });
-        btn.textContent = showingAll ? 'Show less' : 'Show more';
+    if(!sessTab._daTabAttached){
+      sessTab._daTabAttached = true;
+      sessTab.addEventListener('click', function(e){
+        e.preventDefault();
+        sessTab.classList.add('active');
+        snapTab.classList.remove('active');
+        sessPanel.style.display = '';
+        snapPanel.style.display = 'none';
       });
     }
   }
@@ -79,8 +84,7 @@
       $(document).on('daPageLoad', function(){
         var tables = document.querySelectorAll('table.sortable');
         Array.prototype.forEach.call(tables, makeSortable);
-        // initialize show-more behavior with limit 50 (idempotent)
-        runShowMore(50);
+        setupTabs();
       });
     })(window.jQuery);
   } else {
@@ -88,7 +92,7 @@
     document.addEventListener('DOMContentLoaded', function(){
       var tables = document.querySelectorAll('table.sortable');
       Array.prototype.forEach.call(tables, makeSortable);
-      runShowMore(50);
+      setupTabs();
     });
   }
 })();
