@@ -188,7 +188,13 @@ under: |
   #### Summary statistics
   
   Keep in mind:
-  Docassemble sessions typically are kept for only 90 days. Snapshotted sessions
+
+  % if isinstance(get_config("interview delete days"), int):
+  Docassemble sessions on this server are kept for only ${ get_config("interview delete days") } days. 
+  % else:
+  Docassemble sessions typically are kept for only 90 days.
+  % endif
+  Snapshotted sessions
   may or may not be set to be kept longer. Statistics below will reflect the settings
   on your server and interviews.
 
@@ -217,7 +223,7 @@ under: |
   <table id="summary-table" class="table table-striped table-bordered sortable">
     <thead>
       <tr>
-        <th>Interview</th>
+        <th>Interview (click to sort)</th>
         <th data-type="number">30 days</th>
         <th data-type="number">90 days</th>
         <th data-type="number">365 days</th>
