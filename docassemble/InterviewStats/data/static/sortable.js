@@ -78,21 +78,9 @@
     }
   }
 
-  // Use docassemble's daPageLoad event so this runs after each AJAX screen load
-  if (window.jQuery) {
-    (function($){
-      $(document).on('daPageLoad', function(){
-        var tables = document.querySelectorAll('table.sortable');
-        Array.prototype.forEach.call(tables, makeSortable);
-        setupTabs();
-      });
-    })(window.jQuery);
-  } else {
-    // Fallback to a single run on DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', function(){
-      var tables = document.querySelectorAll('table.sortable');
-      Array.prototype.forEach.call(tables, makeSortable);
-      setupTabs();
-    });
-  }
+$(document).on('daPageLoad', function(){
+    var tables = document.querySelectorAll('table.sortable');
+    Array.prototype.forEach.call(tables, makeSortable);
+    setupTabs();
+});
 })();
