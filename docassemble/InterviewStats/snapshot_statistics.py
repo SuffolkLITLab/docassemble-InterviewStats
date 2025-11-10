@@ -85,16 +85,13 @@ def get_summary_stats_by_filename():
                     filename,
                     -- Last 30 days
                     COUNT(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS count_30d,
-                    MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS min_30d,
-                    MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS max_30d,
+                    -- per-window min/max are redundant with overall max; only counts are needed
                     -- Last 90 days
                     COUNT(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS count_90d,
-                    MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS min_90d,
-                    MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS max_90d,
+                    
                     -- Last 365 days
                     COUNT(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS count_365d,
-                    MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS min_365d,
-                    MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS max_365d,
+                    
                     -- All time
                     COUNT(modtime) AS count_all,
                     MIN(modtime) AS min_all,
@@ -201,7 +198,7 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
     and optionally filtering out sessions that only have a single entry (step 1 only).
 
     Returns list of dicts with keys: filename, count_30d, min_30d, max_30d,
-    count_90d, min_90d, max_90d, count_365d, min_365d, max_365d,
+    count_90d, count_365d,
     count_all, min_all, max_all.
     """
     query = """
@@ -218,17 +215,11 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
         FROM userdict u
         JOIN mostrecent m ON m.key = u.key AND m.modtime = u.modtime
     )
-    SELECT 
+        SELECT 
         filename,
         COUNT(*) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS count_30d,
-        MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS min_30d,
-        MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '30 days') AS max_30d,
         COUNT(*) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS count_90d,
-        MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS min_90d,
-        MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '90 days') AS max_90d,
         COUNT(*) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS count_365d,
-        MIN(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS min_365d,
-        MAX(modtime) FILTER (WHERE modtime >= CURRENT_TIMESTAMP - INTERVAL '365 days') AS max_365d,
         COUNT(*) AS count_all,
         MIN(modtime) AS min_all,
         MAX(modtime) AS max_all

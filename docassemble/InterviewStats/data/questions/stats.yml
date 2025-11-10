@@ -262,14 +262,13 @@ under: |
   <table id="sessions-table" class="table table-striped table-bordered sortable">
     <thead>
       <tr>
-        <th>Interview</th>
-        <th data-type="number">30 days</th>
-        <th data-type="number">90 days</th>
-        <th data-type="number">365 days</th>
-        <th data-type="number">All time</th>
-        <th data-type="date">Last (30d)</th>
-        <th data-type="date">Latest</th>
-      </tr>
+          <th>Interview</th>
+          <th data-type="number">30 days</th>
+          <th data-type="number">90 days</th>
+          <th data-type="number">365 days</th>
+          <th data-type="number">All time</th>
+          <th data-type="date">Latest</th>
+        </tr>
     </thead>
     <tbody>
     % for row in session_summary_by_filename:
@@ -278,9 +277,8 @@ under: |
         <td>${ row.get('count_30d', 0) }</td>
         <td>${ row.get('count_90d', 0) }</td>
         <td>${ row.get('count_365d', 0) }</td>
-        <td>${ row.get('count_all', 0) }</td>
-        <td>${ format_date(row.get('max_30d'), format='MM/dd/yyyy') if row.get('max_30d') else '' }</td>
-        <td>${ format_date(row.get('max_all'), format='MM/dd/yyyy') if row.get('max_all') else '' }</td>
+  <td>${ row.get('count_all', 0) }</td>
+  <td>${ format_date(row.get('max_all'), format='MM/dd/yyyy') if row.get('max_all') else '' }</td>
       </tr>
     % endfor
     </tbody>
@@ -294,15 +292,14 @@ fields:
       get_combined_filename_list()
 ---
 code: |
-  try:
-    interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), filename)
-  except:
-    interview_title = filename
-  # A survey interview's title is saved in Stats, yet interview_title is used on Summary page which comes before we kick out survey interviews, so we set the value here.
-  if stats and 'title' in stats[0].keys():
-    interview_title = stats[0]['title']
----
-code: |
+      <tr>
+        <td title="${ row['filename'] }"><span class="short-name">${ shorten_filename(row['filename']) }</span></td>
+        <td>${ row.get('count_30d', 0) }</td>
+        <td>${ row.get('count_90d', 0) }</td>
+        <td>${ row.get('count_365d', 0) }</td>
+        <td>${ row.get('count_all', 0) }</td>
+        <td>${ format_date(row.get('max_all'), format='MM/dd/yyyy') if row.get('max_all') else '' }</td>
+      </tr>
   if filename is not None:
     if 'data/questions' in filename or 'playground' in filename:
       stats = get_stats(filename)
