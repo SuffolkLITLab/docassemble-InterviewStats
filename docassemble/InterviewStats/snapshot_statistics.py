@@ -56,9 +56,9 @@ def shorten_filename(filename: str, max_length: int = 20) -> str:
     # Collapse middle if too long
     if len(name) > max_length:
         keep = max_length - 3
-        front = (keep + 1) // 2
-        back = keep // 2
-        name = name[:front] + '...' + name[-back:]
+        front_end = (keep + 1) // 2
+        back_start = keep // 2
+        name = name[:front_end] + '...' + name[-back_start:]
 
     return name
 
