@@ -292,14 +292,6 @@ fields:
       get_combined_filename_list()
 ---
 code: |
-      <tr>
-        <td title="${ row['filename'] }"><span class="short-name">${ shorten_filename(row['filename']) }</span></td>
-        <td>${ row.get('count_30d', 0) }</td>
-        <td>${ row.get('count_90d', 0) }</td>
-        <td>${ row.get('count_365d', 0) }</td>
-        <td>${ row.get('count_all', 0) }</td>
-        <td>${ format_date(row.get('max_all'), format='MM/dd/yyyy') if row.get('max_all') else '' }</td>
-      </tr>
   if filename is not None:
     if 'data/questions' in filename or 'playground' in filename:
       stats = get_stats(filename)
