@@ -1,6 +1,6 @@
 import os
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 from fnmatch import fnmatchcase
 from distutils.util import convert_path
 
@@ -51,8 +51,7 @@ setup(name='docassemble.InterviewStats',
       author_email='bwilley@suffolk.com',
       license='The MIT License (MIT)',
       url='https://courtformsonline.org/about/',
-      packages=find_packages(),
-      namespace_packages=['docassemble'],
+      packages=find_namespace_packages(),
       install_requires=['bokeh>=2.4.2', 'cenpy>=1.0.0.post4', 'geopandas>=0.9.0', 'numpy>=1.0.4', 'pandas>=1.4.2', 'requests>=2.27.1'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/InterviewStats/', package='docassemble.InterviewStats'),
