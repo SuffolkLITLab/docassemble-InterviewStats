@@ -300,6 +300,15 @@ code: |
   else:
     no_interview_stats
 ---
+code: |
+  try:
+    interview_title = next(iter([interview.get('title') for interview in interview_menu() if interview.get('filename') == filename]), filename)
+  except:
+    interview_title = filename
+  # A survey interview's title is saved in Stats, yet interview_title is used on Summary page which comes before we kick out survey interviews, so we set the value here.
+  if stats and 'title' in stats[0].keys():
+    interview_title = stats[0]['title']
+---
 event: no_interview_stats
 question: There are no interviews to look for data in!
 subquestion: |
