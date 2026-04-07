@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docassemble.InterviewStats"
+version = "0.5.2"
+description = "A docassemble interview to view statistics from other saved interview responses."
+readme = "README.md"
+authors = [
+    { name="Suffolk Legal Innovation and Technology Lab", email="litlab@suffolk.edu" },
+]
+dependencies = [
+    "bokeh>=2.4.2",
+    "cenpy>=1.0.0.post4",
+    "geopandas>=0.9.0",
+    "numpy>=1.0.4",
+    "pandas>=1.4.2",
+    "requests>=2.27.1",
+]
+license = "MIT"
+license-files = ["LICENSE*"]
+
+[project.urls]
+GitHub = "https://github.com/SuffolkLITLab/docassemble-InterviewStats"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
