@@ -27,3 +27,32 @@ GitHub = "https://github.com/SuffolkLITLab/docassemble-InterviewStats"
 [tool.setuptools.packages.find]
 where = ["."]
 
+[dependency-groups]
+dev = [
+    "docassemble.base >= 1.9.0",
+    "docassemble.webapp >= 1.9.0",
+    "mypy",
+    "types-requests",
+    "pandas-stubs",
+]
+
+# per-module options:
+[[tool.mypy.overrides]]
+module= "docassemble.webapp.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "docassemble.base.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "cenpy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "geopandas.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "bokeh.*"
+ignore_missing_imports = true
