@@ -144,6 +144,6 @@ def save_random_records(number_of_records, title = '', seed_data_list = None, da
       JsonDb.add(new_entry)
     JsonDb.commit()
     
-def phrase(input:str = None) -> str:
+def phrase(input:str) -> str:
     base = {'eq': 'on', 'gt': 'after', 'lt': 'before', 'between': 'between'}
     return base[input]
