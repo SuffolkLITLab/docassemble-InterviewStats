@@ -1,7 +1,15 @@
-from docassemble.webapp.jsonstore import read_answer_json, write_answer_json, JsonStorage, JsonDb
 from docassemble.base.generate_key import random_alphanumeric
 from docassemble.base.functions import get_current_info
 from docassemble.base.util import variables_snapshot_connection
+from docassemble.webapp.jsonstore import JsonStorage
+
+try:
+    from docassemble.webapp.jsonstore import JsonDb
+except ImportError:
+    # Will happen on 1.9.8 and up
+    from docassemble.webapp.jsonstore import db
+
+    JsonDb = db.session
 
 __all__ = ['write_random_user', 'delete_data_from_interview']
 
