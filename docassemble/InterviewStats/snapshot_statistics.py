@@ -1,5 +1,6 @@
-from docassemble.base.util import variables_snapshot_connection, interview_menu
-from typing import List
+from docassemble.base.util import variables_snapshot_connection, interview_menu, log
+from docassemble.webapp.db_object import init_sqlalchemy
+from sqlalchemy.sql import text
 
 __all__ = [
     "get_filenames",
@@ -14,6 +15,8 @@ __all__ = [
     "get_session_summary_stats_by_filename",
     "get_session_overall_stats",
 ]
+
+db = init_sqlalchemy()
 
 
 def get_filenames():
@@ -223,7 +226,7 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
     count_90d, count_365d,
     count_all, min_all, max_all.
     """
-    query = """
+    query = text("""
     WITH keyed AS (
         SELECT key, MAX(modtime) AS modtime, COUNT(*) AS num_rows
         FROM userdict
@@ -231,7 +234,7 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
     ), mostrecent AS (
         SELECT key, modtime
         FROM keyed
-        WHERE (num_rows > 1) OR (%(filter_step1)s = FALSE)
+        WHERE (num_rows > 1) OR (:filter_step1 = FALSE)
     ), latest AS (
         SELECT u.filename, m.modtime
         FROM userdict u
@@ -248,26 +251,23 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
     FROM latest
     GROUP BY filename
     ORDER BY count_30d DESC, count_90d DESC, count_365d DESC
-    """
+    """)
 
-    conn = variables_snapshot_connection()
-    try:
+    with db.connect() as con:
         try:
-            result = conn.execute(query, {"filter_step1": filter_step1})
-        except Exception:
+            result = con.execute(query, {"filter_step1": filter_step1})
+        except Exception as ex:
+            log(f"Caught exception when getting session summary stats: {ex}")
             result = None
 
         if result is not None and hasattr(result, "mappings"):
             rows = list(result.mappings())
             results = [dict(r) for r in rows]
         else:
-            with conn.cursor() as cur:
-                cur.execute(query, {"filter_step1": filter_step1})
-                rows = cur.fetchall()
-                cols = [d[0] for d in cur.description]
-            results = [dict(zip(cols, row)) for row in rows]
-    finally:
-        conn.close()
+            results = []
+            rs = con.execute(query, {"filter_step1": filter_step1})
+            for counts in rs:
+                results.append(dict(counts._mapping))
 
     for r in results:
         for key in ("count_30d", "count_90d", "count_365d", "count_all"):
@@ -278,7 +278,7 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
 
 def get_session_overall_stats(filter_step1: bool = True):
     """Return overall session stats (count, min, max modtime) across all filenames."""
-    query = """
+    query = text("""
     WITH keyed AS (
         SELECT key, MAX(modtime) AS modtime, COUNT(*) AS num_rows
         FROM userdict
@@ -286,18 +286,16 @@ def get_session_overall_stats(filter_step1: bool = True):
     ), mostrecent AS (
         SELECT key, modtime
         FROM keyed
-        WHERE (num_rows > 1) OR (%(filter_step1)s = FALSE)
+        WHERE (num_rows > 1) OR (:filter_step1 = FALSE)
     )
     SELECT 
         COUNT(*) AS count_all,
         MIN(modtime) AS min_all,
         MAX(modtime) AS max_all
     FROM mostrecent
-    """
+    """)
 
-    conn = variables_snapshot_connection()
-    with conn.cursor() as cur:
-        cur.execute(query, {"filter_step1": filter_step1})
-        val = cur.fetchone()
-    conn.close()
+    with db.connect() as con:
+        rs = con.execute(query, {"filter_step1": filter_step1})
+        val = rs.fetchone()
     return val
