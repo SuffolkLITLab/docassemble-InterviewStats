@@ -1,7 +1,20 @@
 from docassemble.base.util import variables_snapshot_connection, interview_menu
 from typing import List
 
-__all__ = ['get_filenames', 'get_summary_stats', 'get_stats', 'get_columns', 'get_column_values', 'get_combined_filename_list', "get_overall_stats", "get_summary_stats_by_filename", 'shorten_filename', 'get_session_summary_stats_by_filename', 'get_session_overall_stats']
+__all__ = [
+    "get_filenames",
+    "get_summary_stats",
+    "get_stats",
+    "get_columns",
+    "get_column_values",
+    "get_combined_filename_list",
+    "get_overall_stats",
+    "get_summary_stats_by_filename",
+    "shorten_filename",
+    "get_session_summary_stats_by_filename",
+    "get_session_overall_stats",
+]
+
 
 def get_filenames():
     conn = variables_snapshot_connection()
@@ -21,7 +34,13 @@ def get_combined_filename_list():
         found_match = False
         for interview in interview_filenames:
             if interview["filename"] == json_interview[0]:
-                combined_interviews.append({interview["filename"]: interview.get("title", interview["filename"]) })
+                combined_interviews.append(
+                    {
+                        interview["filename"]: interview.get(
+                            "title", interview["filename"]
+                        )
+                    }
+                )
                 found_match = True
                 continue
         if not found_match:
@@ -41,26 +60,27 @@ def shorten_filename(filename: str, max_length: int = 20) -> str:
     Returns a string safe for display (contains \u200b zero-width spaces to allow wrapping).
     """
     if not filename:
-        return ''
+        return ""
     # Remove package prefix before ':'
-    name = filename.split(':', 1)[-1]
+    name = filename.split(":", 1)[-1]
     # Remove .yml suffix
-    if name.endswith('.yml'):
+    if name.endswith(".yml"):
         name = name[:-4]
     # Replace path-like slashes with just the last component
-    if '/' in name:
-        name = name.split('/')[-1]
+    if "/" in name:
+        name = name.split("/")[-1]
     # Insert zero-width space after underscores to allow wrapping
-    name = name.replace('_', '_' + '\u200b')
+    name = name.replace("_", "_" + "\u200b")
 
     # Collapse middle if too long
     if len(name) > max_length:
         keep = max_length - 3
         front_end = (keep + 1) // 2
         back_start = keep // 2
-        name = name[:front_end] + '...' + name[-back_start:]
+        name = name[:front_end] + "..." + name[-back_start:]
 
     return name
+
 
 def get_summary_stats(filename: str):
     conn = variables_snapshot_connection()
@@ -74,7 +94,7 @@ def get_summary_stats(filename: str):
                     AND 
                     tags IS DISTINCT FROM 'metadata'
                 """
-        cur.execute(query, {'filename': filename})
+        cur.execute(query, {"filename": filename})
         val = cur.fetchone()
     conn.close()
     return val
@@ -111,7 +131,7 @@ def get_summary_stats_by_filename():
             # Some connection objects require a cursor() for execution
             result = None
 
-        if result is not None and hasattr(result, 'mappings'):
+        if result is not None and hasattr(result, "mappings"):
             rows = list(result.mappings())
             results = [dict(r) for r in rows]
         else:
@@ -126,7 +146,7 @@ def get_summary_stats_by_filename():
 
     # Normalize None counts to 0 for count columns
     for r in results:
-        for key in ('count_30d', 'count_90d', 'count_365d', 'count_all'):
+        for key in ("count_30d", "count_90d", "count_365d", "count_all"):
             if r.get(key) is None:
                 r[key] = 0
     return results
@@ -140,9 +160,9 @@ def get_overall_stats():
         val = cur.fetchone()
     conn.close()
     return val
-  
-      
-def get_stats(filename: str, column:str=None):
+
+
+def get_stats(filename: str, column: str = None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         # use a parameterized query to prevent SQL injection
@@ -157,14 +177,14 @@ def get_stats(filename: str, column:str=None):
                    WHERE filename=%(filename)s
                    AND 
                    tags IS DISTINCT FROM 'metadata'"""
-        cur.execute(query, {'filename': filename})
+        cur.execute(query, {"filename": filename})
         records = list()
         for record in cur:
             # Add modtime to the all stats
-            record[1]['modtime'] = record[0]
+            record[1]["modtime"] = record[0]
             # Note that this is normally empty or 'metadata'
             # in store_variables_snapshot() this is the `key` parameter
-            record[1]['tags'] = record[2]
+            record[1]["tags"] = record[2]
             if column:
                 if column in record[1]:
                     records.append(record[1][column])
@@ -176,6 +196,7 @@ def get_stats(filename: str, column:str=None):
     conn.close()
     return records
 
+
 def get_columns(records):
     if not records:
         return []
@@ -185,11 +206,12 @@ def get_columns(records):
     else:
         return []
 
+
 def get_column_values(records, column) -> set:
     if not records or not column:
         return []
     return set([record.get(column) for record in records])
-    
+
 
 def get_session_summary_stats_by_filename(filter_step1: bool = True):
     """Return session-based summary stats grouped by filename.
@@ -231,16 +253,16 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
     conn = variables_snapshot_connection()
     try:
         try:
-            result = conn.execute(query, {'filter_step1': filter_step1})
+            result = conn.execute(query, {"filter_step1": filter_step1})
         except Exception:
             result = None
 
-        if result is not None and hasattr(result, 'mappings'):
+        if result is not None and hasattr(result, "mappings"):
             rows = list(result.mappings())
             results = [dict(r) for r in rows]
         else:
             with conn.cursor() as cur:
-                cur.execute(query, {'filter_step1': filter_step1})
+                cur.execute(query, {"filter_step1": filter_step1})
                 rows = cur.fetchall()
                 cols = [d[0] for d in cur.description]
             results = [dict(zip(cols, row)) for row in rows]
@@ -248,7 +270,7 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
         conn.close()
 
     for r in results:
-        for key in ('count_30d', 'count_90d', 'count_365d', 'count_all'):
+        for key in ("count_30d", "count_90d", "count_365d", "count_all"):
             if r.get(key) is None:
                 r[key] = 0
     return results
@@ -275,8 +297,7 @@ def get_session_overall_stats(filter_step1: bool = True):
 
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
-        cur.execute(query, {'filter_step1': filter_step1})
+        cur.execute(query, {"filter_step1": filter_step1})
         val = cur.fetchone()
     conn.close()
     return val
-    
