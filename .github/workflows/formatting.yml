@@ -1,0 +1,17 @@
+name: formatting action
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  linter_name:
+    name: formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: SuffolkLITLab/ALActions/black-formatting@main
+      - uses: SuffolkLITLab/ALActions/docsig@main
