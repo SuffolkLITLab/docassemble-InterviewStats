@@ -173,7 +173,7 @@ def get_overall_stats():
     return val
 
 
-def get_stats(filename: str, column: str = None, date_from=None, date_to=None):
+def get_stats(filename: str, column: str | None = None, date_from=None, date_to=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         # use a parameterized query to prevent SQL injection
@@ -230,7 +230,7 @@ def get_columns(records):
 
 def get_column_values(records, column) -> set:
     if not records or not column:
-        return []
+        return set()
     return set([record.get(column) for record in records])
 
 
