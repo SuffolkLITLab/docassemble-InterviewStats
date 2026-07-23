@@ -165,7 +165,7 @@ def get_overall_stats():
     return val
 
 
-def get_stats(filename: str, column: str = None):
+def get_stats(filename: str, column: str = None, date_from=None, date_to=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         # use a parameterized query to prevent SQL injection
@@ -180,7 +180,14 @@ def get_stats(filename: str, column: str = None):
                    WHERE filename=%(filename)s
                    AND 
                    tags IS DISTINCT FROM 'metadata'"""
-        cur.execute(query, {"filename": filename})
+        params = {"filename": filename}
+        if date_from is not None:
+            query += " AND modtime >= %(date_from)s"
+            params["date_from"] = date_from
+        if date_to is not None:
+            query += " AND modtime <= %(date_to)s"
+            params["date_to"] = date_to
+        cur.execute(query, params)
         records = list()
         for record in cur:
             # Add modtime to the all stats

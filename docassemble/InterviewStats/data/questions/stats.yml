@@ -290,13 +290,22 @@ fields:
     datatype: combobox
     code: |
       get_combined_filename_list()
+  - Filter by date range?: filter_by_date
+    datatype: yesno
+    default: False
+  - From date: stats_date_from
+    datatype: date
+    show if: filter_by_date
+  - To date: stats_date_to
+    datatype: date
+    show if: filter_by_date
 ---
 code: |
   if filename is not None:
     if 'data/questions' in filename or 'playground' in filename:
-      stats = get_stats(filename)
+      stats = get_stats(filename, date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
     else:
-      stats = get_stats(filename.replace(':',':data/questions/'))
+      stats = get_stats(filename.replace(':',':data/questions/'), date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
   else:
     no_interview_stats
 ---
