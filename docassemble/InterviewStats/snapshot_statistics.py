@@ -1,3 +1,4 @@
+import datetime
 from docassemble.base.util import variables_snapshot_connection, interview_menu, log
 from docassemble.webapp.db_object import init_sqlalchemy
 from sqlalchemy.sql import text
@@ -185,8 +186,11 @@ def get_stats(filename: str, column: str = None, date_from=None, date_to=None):
             query += " AND modtime >= %(date_from)s"
             params["date_from"] = date_from
         if date_to is not None:
-            query += " AND modtime <= %(date_to)s"
-            params["date_to"] = date_to
+            # date_to is a plain date (no time), so treat it as "through the
+            # end of that day" rather than midnight - otherwise anything
+            # saved after midnight on the To date gets excluded
+            query += " AND modtime < %(date_to)s"
+            params["date_to"] = date_to + datetime.timedelta(days=1)
         cur.execute(query, params)
         records = list()
         for record in cur:
