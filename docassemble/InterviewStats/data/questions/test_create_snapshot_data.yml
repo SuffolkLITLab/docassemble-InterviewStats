@@ -36,6 +36,7 @@ code: |
   users[0].name.last = 'Brown'
   users[0].address
 ---
+id: snapshot-generator
 question: |
   Snapshot Generator
 subquestion: |
@@ -49,6 +50,7 @@ fields:
       - Generate: generate
       - Delete: delete
 ---
+id: how-many-data-points-do-you-want-to-generate
 question: |
   How many data points do you want to generate?
 fields:
@@ -58,6 +60,7 @@ fields:
     min: 1
     max: 400000
 ---
+id: what-interview-do-you-want-to-delete-all-statistics-from
 question: |
   What interview do you want to delete all statistics from?
 fields:
@@ -73,6 +76,7 @@ validation code: |
   if which_to_delete_confirm != which_to_delete:
     validation_error("Are you sure you are deleting the right one?")
 ---
+id: snapshot-ending-screen
 event: ending_screen
 question: |
   % if what_to_do == 'generate':

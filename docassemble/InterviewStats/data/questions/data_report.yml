@@ -37,6 +37,7 @@ code: |
 #	Question screens
 #--------------------------------------------------------------------------
 ---
+id: data-reporting
 question: |
   Data Reporting
 subquestion: |
@@ -55,6 +56,7 @@ fields:
     code: |      
       [{interview.get('filename'): interview.get('title')} for interview in interview_menu()] or get_filenames()
 ---
+id: quick-summary-screen
 question: |
   Quick Summary for ${ interview_title }
 subquestion: |
@@ -65,10 +67,8 @@ subquestion: |
   % if summary_stats[0] > 10000:
   You have a lot of sessions; some operations might take a long time.
   % endif  
-  ---
-  Do you want to filter your data records by date?
 fields:      
-  - no label: filter_date
+  - Do you want to filter your data records by date?: filter_date
     datatype: yesnoradio
     default: False
     required: False
@@ -117,15 +117,17 @@ subquestion: |
   The following fields are from single-valued questions, except those whose answer lack statistic value, such as user-typed answer or numeric input. 
   
   Select a field to see its table:<br>
-    % for col in col_headings_single:  
-      [${col}](${ url_action('show_filtered_data_single', filter_by = col)  })
+    % for col_single in col_headings_single:  
+      [${col_single}](${ url_action('show_filtered_data_single', filter_by = col_single)  })
     % endfor
   % endif
   
   #### All questions (excluding text/area/number fields)
-  [Click here](${ url_action('display_filtered_data_all')  }) to see all the question tables on one screen.
+
+  Click this link to see [all the question tables on one screen](${ url_action('display_filtered_data_all')  }).
 
   #### Download an excel file:
+
   To extract complete data including text/area/numeric fields, make an excel file:<br>
   [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
 ---
@@ -201,6 +203,7 @@ code: |
       no_reportable_data
 ---
 event: no_interview_stats
+id: interview-has-no-data
 question: Interview has no data!
 subquestion: |  
   The interview you selected is <br>
@@ -211,6 +214,7 @@ buttons:
   - Restart: restart
 ---
 event: no_reportable_data
+id: interview-has-no-reportable-data
 question: Interview has no reportable data, you should use Stats
 subquestion: | 
   The interview you selected is <br>
@@ -244,6 +248,7 @@ code: |
     no_filtered_stats
 ---
 event: no_filtered_stats
+id: no-records-in-this-period
 question: No records in this period
 subquestion: |
   % if date_op == 'between':
@@ -359,6 +364,7 @@ code: |
     show_excel_download
 ---
 event: show_excel_download
+id: show-excel-download
 question: |
   Excel Download
 subquestion: |
@@ -390,6 +396,7 @@ subquestion: |
 reload: True
 ---
 event: show_failed_screen
+id: failed-screen
 question: |
   Sorry, something went wrong
 subquestion: |
