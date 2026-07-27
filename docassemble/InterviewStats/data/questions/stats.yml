@@ -140,7 +140,7 @@ code: |
   background_response()
 ---
 code: |
-  summary_stats = get_summary_stats(filename)
+  summary_stats = get_summary_stats(filename, date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
 ---
 reconsider: summary_stats
 question: |
@@ -290,13 +290,22 @@ fields:
     datatype: combobox
     code: |
       get_combined_filename_list()
+  - Filter by date range?: filter_by_date
+    datatype: yesno
+    default: False
+  - From date: stats_date_from
+    datatype: date
+    show if: filter_by_date
+  - To date: stats_date_to
+    datatype: date
+    show if: filter_by_date
 ---
 code: |
   if filename is not None:
     if 'data/questions' in filename or 'playground' in filename:
-      stats = get_stats(filename)
+      stats = get_stats(filename, date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
     else:
-      stats = get_stats(filename.replace(':',':data/questions/'))
+      stats = get_stats(filename.replace(':',':data/questions/'), date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
   else:
     no_interview_stats
 ---
@@ -414,6 +423,7 @@ question: |
 subquestion: |
   Total submissions: ${ len(stats) }
 
+  % if len(stats):
   Group by:
   % for col in groupable_columns:
   [${col}](${ url_action('show_grouped_data', group_by = col)  })
@@ -422,6 +432,9 @@ subquestion: |
   ${ formatted_data.groupby(by=my_col).count().to_html(classes=('table','table-striped')) }
 
   [:file-excel: Download](${ url_ask('generate_excel') })
+  % else:
+  No records found for this date range. Try a wider range or clear the date filter.
+  % endif
 # under: |
 #   ${ map_div }
 # script: |

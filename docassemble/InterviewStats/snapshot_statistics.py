@@ -1,3 +1,4 @@
+import datetime
 from docassemble.base.util import variables_snapshot_connection, interview_menu, log
 from docassemble.webapp.db_object import init_sqlalchemy
 from sqlalchemy.sql import text
@@ -85,7 +86,7 @@ def shorten_filename(filename: str, max_length: int = 20) -> str:
     return name
 
 
-def get_summary_stats(filename: str):
+def get_summary_stats(filename: str, date_from=None, date_to=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         query = """SELECT 
@@ -97,7 +98,14 @@ def get_summary_stats(filename: str):
                     AND 
                     tags IS DISTINCT FROM 'metadata'
                 """
-        cur.execute(query, {"filename": filename})
+        params = {"filename": filename}
+        if date_from is not None:
+            query += " AND modtime >= %(date_from)s"
+            params["date_from"] = date_from
+        if date_to is not None:
+            query += " AND modtime < %(date_to)s"
+            params["date_to"] = date_to + datetime.timedelta(days=1)
+        cur.execute(query, params)
         val = cur.fetchone()
     conn.close()
     return val
@@ -165,7 +173,7 @@ def get_overall_stats():
     return val
 
 
-def get_stats(filename: str, column: str = None):
+def get_stats(filename: str, column: str = None, date_from=None, date_to=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         # use a parameterized query to prevent SQL injection
@@ -180,7 +188,17 @@ def get_stats(filename: str, column: str = None):
                    WHERE filename=%(filename)s
                    AND 
                    tags IS DISTINCT FROM 'metadata'"""
-        cur.execute(query, {"filename": filename})
+        params = {"filename": filename}
+        if date_from is not None:
+            query += " AND modtime >= %(date_from)s"
+            params["date_from"] = date_from
+        if date_to is not None:
+            # date_to is a plain date (no time), so treat it as "through the
+            # end of that day" rather than midnight - otherwise anything
+            # saved after midnight on the To date gets excluded
+            query += " AND modtime < %(date_to)s"
+            params["date_to"] = date_to + datetime.timedelta(days=1)
+        cur.execute(query, params)
         records = list()
         for record in cur:
             # Add modtime to the all stats

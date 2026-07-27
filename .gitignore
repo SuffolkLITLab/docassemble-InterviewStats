@@ -3,3 +3,4 @@
 docassemble/InterviewStats/data/sources/*.zip
 *.egg-info
 dist/**
+.DS_Store
