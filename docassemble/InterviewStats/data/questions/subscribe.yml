@@ -72,6 +72,7 @@ code: |
     formatted_data = pd.DataFrame(stats) 
 ---
 event: no_interview_stats
+id: there-are-no-interviews-to-look-for-data-in
 question: There are no interviews to look for data in!
 subquestion: |
   There aren't any interviews that we can look for data in. There should be at least one interview

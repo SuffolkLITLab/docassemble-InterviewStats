@@ -29,6 +29,7 @@ code: |
 #	Question screens
 #--------------------------------------------------------------------------
 ---
+id: survey data generator
 question: |
   Survey Data Generator
 subquestion: |
@@ -42,6 +43,7 @@ fields:
       - Generate: generate
       - Delete: delete
 ---
+id: how-many-data-points-do-you-want-to-generate
 question: |
   How many data points do you want to generate?
 fields:
@@ -52,6 +54,7 @@ fields:
     min: 1
     max: 4000
 ---
+id: which-survey-interviews-do-you-want-to-delete?
 question: |
   Which survey interviews do you want to delete?
 fields:
@@ -67,6 +70,7 @@ validation code: |
   if which_to_delete_confirm != which_to_delete:
     validation_error("Are you sure you are deleting the right one?")
 ---
+id: ending-screen
 event: ending_screen
 question: |
   % if what_to_do == 'generate':

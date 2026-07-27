@@ -22,7 +22,6 @@ default screen parts:
 ---
 modules:
   - .snapshot_statistics
-  # - .snapshot_geography
 ---
 objects:
   - xlsx_output: DAFile.using(filename="stats.xlsx")
@@ -64,6 +63,7 @@ code: |
     generate_excel = True
 ---
 event: show_excel_download
+id: show-excel-download
 question: |
   Excel Download
 subquestion: |
@@ -125,6 +125,7 @@ subquestion: |
 reload: True
 ---
 event: show_failed_screen
+id: failed-screen
 question: |
   Sorry, something went wrong
 subquestion: |
@@ -143,6 +144,7 @@ code: |
   summary_stats = get_summary_stats(filename, date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
 ---
 reconsider: summary_stats
+id: summary-data-screen
 question: |
   Summary data for ${ interview_title }
 subquestion: |
@@ -155,11 +157,6 @@ subquestion: |
   take a long time.
   % endif
 continue button field: simple_data
-# ---
-# code: |
-#   geo_layout = make_usage_map(formatted_data)
-#   map_script, map_div, map_inline = get_embedable_usage_map(geo_layout)
-#   del geo_layout
 ---
 # question: Interview Statistics 
 # subquestion: |      
@@ -182,6 +179,7 @@ code: |
   session_overall_stats = get_session_overall_stats()
   session_summary_by_filename = get_session_summary_stats_by_filename()
 ---
+id: what-interview-do-you-want-to-view-statistics-for
 question: |
   What interview do you want to view statistics for?
 under: |
@@ -318,6 +316,7 @@ code: |
   if stats and 'title' in stats[0].keys():
     interview_title = stats[0]['title']
 ---
+id: there-are-no-interviews-to-look-for-data-in
 event: no_interview_stats
 question: There are no interviews to look for data in!
 subquestion: |
@@ -359,8 +358,6 @@ subquestion: |
 
   [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
   % endif
-# under: |
-#   ${ map_div }
 fields:
   - Filter State: filter_state
     datatype: yesno
@@ -393,31 +390,15 @@ fields:
   - this date: date_to_filter
     datatype: date
     show if: filter_date
-# script: |
-#     ${ map_script}
 continue button field: start_filter
 continue button label: Filter
-#help: |
-#  ${ formatted_data.to_html() }
-# ---
-# mandatory: True
-# event: viewed_filtered
-# depends on: filt_map_script, filt_map_div
-# need: filt_map_script, filt_map_div
-# id: view_filtered_data
-# question: |
-#   Filtered: ${ filter_description }
-# under: |
-#   ${ filt_map_div }
-# script: |
-#     ${ filt_map_script }
-# back button: True
 ---
 event: show_grouped_data
 code: |
   my_col = action_argument('group_by')
   force_ask('display_grouped_data')
 ---
+id: stats-for
 question: |
   Stats for ${interview_title}
 subquestion: |
@@ -435,29 +416,4 @@ subquestion: |
   % else:
   No records found for this date range. Try a wider range or clear the date filter.
   % endif
-# under: |
-#   ${ map_div }
-# script: |
-#   ${ map_script }
 event: display_grouped_data
-# ---
-# need: start_filter
-# depends on: state_op, state_to_filter
-# code: |
-#   filter_list = []
-#   readable = {'state': 'State', 'modtime': 'Date',
-#               'eq': 'is', 'ne': 'is not', 'lt': '<', 'gt': '>'}
-#   if defined('filter_state') and filter_state:
-#     filter_list.append(('state', state_op, state_to_filter))
-#   if defined('filter_date') and filter_date:
-#     date_to_filter = date_to_filter.replace(tzinfo=None)
-#     filter_list.append(('modtime', date_op, date_to_filter))
-
-#   filter_description = ' and '.join(
-#       ['{} {} {}'.format(readable[elem[0]], readable[elem[1]], elem[2])
-#        for elem in filter_list])
-#   filters = get_filters_from_strings(filter_list)
-#   # filt_geo_layout = make_usage_map(formatted_data, geo_col='zip',
-#   #                                  time_col='modtime', filters=filters)
-#   # filt_map_script, filt_map_div, _ = get_embedable_usage_map(filt_geo_layout)
-#   # del filt_geo_layout
