@@ -86,7 +86,7 @@ def shorten_filename(filename: str, max_length: int = 20) -> str:
     return name
 
 
-def get_summary_stats(filename: str):
+def get_summary_stats(filename: str, date_from=None, date_to=None):
     conn = variables_snapshot_connection()
     with conn.cursor() as cur:
         query = """SELECT 
@@ -98,7 +98,14 @@ def get_summary_stats(filename: str):
                     AND 
                     tags IS DISTINCT FROM 'metadata'
                 """
-        cur.execute(query, {"filename": filename})
+        params = {"filename": filename}
+        if date_from is not None:
+            query += " AND modtime >= %(date_from)s"
+            params["date_from"] = date_from
+        if date_to is not None:
+            query += " AND modtime < %(date_to)s"
+            params["date_to"] = date_to + datetime.timedelta(days=1)
+        cur.execute(query, params)
         val = cur.fetchone()
     conn.close()
     return val

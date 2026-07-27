@@ -140,7 +140,7 @@ code: |
   background_response()
 ---
 code: |
-  summary_stats = get_summary_stats(filename)
+  summary_stats = get_summary_stats(filename, date_from=stats_date_from if filter_by_date else None, date_to=stats_date_to if filter_by_date else None)
 ---
 reconsider: summary_stats
 question: |
@@ -423,6 +423,7 @@ question: |
 subquestion: |
   Total submissions: ${ len(stats) }
 
+  % if len(stats):
   Group by:
   % for col in groupable_columns:
   [${col}](${ url_action('show_grouped_data', group_by = col)  })
@@ -431,6 +432,9 @@ subquestion: |
   ${ formatted_data.groupby(by=my_col).count().to_html(classes=('table','table-striped')) }
 
   [:file-excel: Download](${ url_ask('generate_excel') })
+  % else:
+  No records found for this date range. Try a wider range or clear the date filter.
+  % endif
 # under: |
 #   ${ map_div }
 # script: |
