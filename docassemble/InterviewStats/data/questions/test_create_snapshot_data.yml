@@ -22,10 +22,14 @@ code: |
     # Edit your data here
     ma_zips = list(set([f'{random.randint(75001, 79999):05}' for _ in range(300)])) \
         + list(set([f'{random.randint(1001,2799):05}' for _ in range(300)]))
+    import datetime
+    datetimes = [datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None) - datetime.timedelta(days=i) for i in range(30)]
     def my_generator():
       for _ in range(number_of_data_points):
         yield {'zip': random.choice(ma_zips), 'state': 'MA'}
-    write_random_user(my_generator())
+    def modtime_generator():
+      return random.choice(datetimes)
+    write_random_user(my_generator(), modtime_generator=modtime_generator)
   elif what_to_do == 'delete':
     which_to_delete
     delete_data_from_interview(which_to_delete)
