@@ -49,38 +49,8 @@
     });
   }
 
-
-  function setupTabs(){
-    var snapTab = document.getElementById('snapshots-tab');
-    var sessTab = document.getElementById('sessions-tab');
-    var snapPanel = document.getElementById('snapshots-panel');
-    var sessPanel = document.getElementById('sessions-panel');
-    if(!snapTab || !sessTab || !snapPanel || !sessPanel) return;
-    if(!snapTab._daTabAttached){
-      snapTab._daTabAttached = true;
-      snapTab.addEventListener('click', function(e){
-        e.preventDefault();
-        snapTab.classList.add('active');
-        sessTab.classList.remove('active');
-        snapPanel.style.display = '';
-        sessPanel.style.display = 'none';
-      });
-    }
-    if(!sessTab._daTabAttached){
-      sessTab._daTabAttached = true;
-      sessTab.addEventListener('click', function(e){
-        e.preventDefault();
-        sessTab.classList.add('active');
-        snapTab.classList.remove('active');
-        sessPanel.style.display = '';
-        snapPanel.style.display = 'none';
-      });
-    }
-  }
-
 $(document).on('daPageLoad', function(){
     var tables = document.querySelectorAll('table.sortable');
     Array.prototype.forEach.call(tables, makeSortable);
-    setupTabs();
 });
 })();
