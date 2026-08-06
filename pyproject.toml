@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "docassemble.InterviewStats"
-version = "0.5.3"
+version = "0.6.0"
 description = "A docassemble interview to view statistics from other saved interview responses."
 readme = "README.md"
 authors = [
