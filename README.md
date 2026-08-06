@@ -42,19 +42,9 @@ visiting this url:
 They will be directed immediately to download an XlSX file containing the
 statistics.
 
-## Example
-
-![Example Pic](static/example_pic.png)
-
-
-## Roadmap
-
-Currently, we can show simple grouping over all the data points in the interview stats. However, the
-special visualization are only shown on based on the `zip` attribute. We're working to expand the
-features available here in conjunction with our [EFiling Integration](https://github.com/SuffolkLITLab/EfileProxyServer).
+## Contributing 
 
 If you have specific feature requests, feel free to open an issue or make a PR!
-
 
 ## Authors
 
