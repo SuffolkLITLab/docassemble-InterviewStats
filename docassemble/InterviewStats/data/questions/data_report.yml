@@ -95,6 +95,8 @@ question: |
   ${interview_title} - Data Reports
 subquestion: |
   Total submissions: ${ len(stats) }
+
+  [:file-excel: Make Excel Download](${ url_ask('generate_excel') })
   
   % if filter_date:  
     Date filter: Records dated ${phrase(date_op)} ${begin_date}

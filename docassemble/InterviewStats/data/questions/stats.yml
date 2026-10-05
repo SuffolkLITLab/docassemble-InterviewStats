@@ -350,6 +350,8 @@ question: |
 subquestion: |
   Total submissions: ${ len(stats) }
 
+  [:file-excel: Download](${ url_ask('generate_excel') })
+
   % if len(stats):
   Group by:
   % for col in groupable_columns:
