@@ -1,5 +1,8 @@
 metadata:
   title: "TEST: Snapshot generator"
+  required privileges: 
+    - admin
+    - developer
 ---
 objects:
   - users: ALPeopleList.using(ask_number=False,target_number=1)
