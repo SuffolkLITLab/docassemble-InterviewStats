@@ -358,7 +358,7 @@ code: |
     xlsx_output.initialize(filename=proper_name + ".xlsx")
     writer = pd.ExcelWriter(xlsx_output.path(),
       engine='xlsxwriter',
-      engine_kwargs={'options': {'remove_timezone': True}})
+      engine_kwargs={'options': {'remove_timezone': True, 'strings_to_formulas': False}})
     excel_formatted_data.to_excel(writer, index=False)
     writer.close()
     xlsx_output.commit()
@@ -382,7 +382,7 @@ code: |
   xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
-    engine_kwargs={'options': {'remove_timezone': True}})
+    engine_kwargs={'options': {'remove_timezone': True, 'strings_to_formulas': False}})
   bg_data.to_excel(writer, index=False)
   writer.close()
   xlsx_output.commit()
