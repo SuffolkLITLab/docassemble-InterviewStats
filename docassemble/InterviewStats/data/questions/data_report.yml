@@ -237,11 +237,11 @@ code: |
   
   # Build filtered_stats if filter_date is selected
   if filter_date:
-    filter_begin = format_date(begin_date, format='MM/dd/yyyy')
+    filter_begin = format_date(begin_date, format='yyyy-MM-dd')
     if date_op == 'between':
-      filter_end = format_date(end_date, format='MM/dd/yyyy')    
+      filter_end = format_date(end_date, format='yyyy-MM-dd')    
     for record in stats:
-      record_date = format_date(record['modtime'], format='MM/dd/yyyy')    
+      record_date = format_date(record['modtime'], format='yyyy-MM-dd')    
       if (date_op == 'eq' and record_date == filter_begin) or (date_op == 'gt' and record_date > filter_begin) or (date_op == 'lt' and record_date < filter_begin) or (date_op == 'between' and record_date >= filter_begin and record_date < filter_end):
         filtered_stats.append(record) 
   
@@ -358,7 +358,7 @@ code: |
     xlsx_output.initialize(filename=proper_name + ".xlsx")
     writer = pd.ExcelWriter(xlsx_output.path(),
       engine='xlsxwriter',
-      engine_kwargs={'options': {'remove_timezone': True}})
+      engine_kwargs={'options': {'remove_timezone': True, 'strings_to_formulas': False}})
     excel_formatted_data.to_excel(writer, index=False)
     writer.close()
     xlsx_output.commit()
@@ -382,7 +382,7 @@ code: |
   xlsx_output.initialize(filename=proper_name + ".xlsx")
   writer = pd.ExcelWriter(xlsx_output.path(),
     engine='xlsxwriter',
-    engine_kwargs={'options': {'remove_timezone': True}})
+    engine_kwargs={'options': {'remove_timezone': True, 'strings_to_formulas': False}})
   bg_data.to_excel(writer, index=False)
   writer.close()
   xlsx_output.commit()
