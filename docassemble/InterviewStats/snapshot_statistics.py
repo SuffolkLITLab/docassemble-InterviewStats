@@ -1,7 +1,16 @@
 import datetime
 from docassemble.base.util import variables_snapshot_connection, interview_menu, log
-from docassemble.webapp.db_object import init_sqlalchemy
 from sqlalchemy.sql import text
+
+try:
+    from docassemble.webapp.db import get_session as _get_connection
+except ModuleNotFoundError as err:
+    if err.name != "docassemble.webapp.db":
+        raise
+    # docassemble before 1.10 has no webapp.db, it uses a SQLAlchemy engine instead
+    from docassemble.webapp.db_object import init_sqlalchemy
+
+    _get_connection = init_sqlalchemy().connect
 
 __all__ = [
     "get_filenames",
@@ -16,8 +25,6 @@ __all__ = [
     "get_session_summary_stats_by_filename",
     "get_session_overall_stats",
 ]
-
-db = init_sqlalchemy()
 
 
 def get_filenames():
@@ -271,7 +278,7 @@ def get_session_summary_stats_by_filename(filter_step1: bool = True):
     ORDER BY count_30d DESC, count_90d DESC, count_365d DESC
     """)
 
-    with db.connect() as con:
+    with _get_connection() as con:
         try:
             result = con.execute(query, {"filter_step1": filter_step1})
         except Exception as ex:
@@ -313,7 +320,7 @@ def get_session_overall_stats(filter_step1: bool = True):
     FROM mostrecent
     """)
 
-    with db.connect() as con:
+    with _get_connection() as con:
         rs = con.execute(query, {"filter_step1": filter_step1})
         val = rs.fetchone()
     return val

@@ -1,16 +1,6 @@
 import random
 from docassemble.base.generate_key import random_alphanumeric
 from docassemble.base.functions import get_current_info
-from docassemble.webapp.jsonstore import JsonStorage
-
-try:
-    from docassemble.webapp.jsonstore import JsonDb
-except ImportError:
-    # Will happen on 1.9.8 and up
-    from docassemble.webapp.jsonstore import db
-
-    JsonDb = db.session
-
 
 from .snapshot_statistics import *
 
@@ -130,12 +120,42 @@ def get_col_val_count(records_count=None, label=None, labels=None, column=None):
     return results
 
 
+def _json_store():
+    try:
+        from docassemble.webapp.jsonstorage.helpers import JsonStorage
+        from docassemble.webapp.db import session_scope
+    except ModuleNotFoundError as err:
+        if err.name not in (
+            "docassemble.webapp.jsonstorage",
+            "docassemble.webapp.jsonstorage.helpers",
+            "docassemble.webapp.db",
+        ):
+            raise
+        from docassemble.webapp.jsonstore import JsonStorage
+        from docassemble.webapp.jsonstore import db
+
+        class _LegacyScope:
+            def __enter__(self):
+                return db.session
+
+            def __exit__(self, exc_type, exc, tb):
+                if exc_type is None:
+                    db.session.commit()
+                else:
+                    db.session.rollback()
+
+        return JsonStorage, _LegacyScope
+    return JsonStorage, session_scope
+
+
 def save_random_records(
     number_of_records, title="", seed_data_list=None, date_input=None, tags=None
 ):
     """
     Generate random survey type records for testing data reports.
     """
+    JsonStorage, scope = _json_store()
+    new_entries = []
     for index in range(number_of_records):
         type_dict = dict()
         field_dict = dict()
@@ -170,8 +190,10 @@ def save_random_records(
             modtime=record_date,
             persistent=False,
         )
-        JsonDb.add(new_entry)
-    JsonDb.commit()
+        new_entries.append(new_entry)
+    with scope() as session:
+        for new_entry in new_entries:
+            session.add(new_entry)
 
 
 def phrase(input: str) -> str:
