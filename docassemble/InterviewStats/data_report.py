@@ -16,7 +16,7 @@ except ModuleNotFoundError as err:
     ):
         raise
     # docassemble before 1.10 keeps these in jsonstore and uses db.session
-    from docassemble.webapp.jsonstore import JsonStorage
+    from docassemble.webapp.jsonstore import JsonStorage  # type: ignore[no-redef]
     from docassemble.webapp.jsonstore import db as _legacy_db
 
     @contextmanager
@@ -27,6 +27,7 @@ except ModuleNotFoundError as err:
         except Exception:
             _legacy_db.session.rollback()
             raise
+
 
 __all__ = [
     "get_column_values_list",
