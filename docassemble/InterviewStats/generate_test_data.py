@@ -2,7 +2,7 @@ from docassemble.base.generate_key import random_alphanumeric
 from docassemble.base.functions import get_current_info
 from docassemble.base.util import variables_snapshot_connection
 
-from .data_report import _json_store
+from .data_report import JsonStorage, _json_scope
 
 __all__ = ["write_random_user", "delete_data_from_interview"]
 
@@ -10,7 +10,6 @@ __all__ = ["write_random_user", "delete_data_from_interview"]
 def write_random_user(data_iterator, filename=None, tags=None, modtime_generator=None):
     if not filename:
         filename = get_current_info().get("yaml_filename", None)
-    JsonStorage, scope = _json_store()
     new_entries = []
     for data in data_iterator:
         random_uid = random_alphanumeric(32)
@@ -32,7 +31,7 @@ def write_random_user(data_iterator, filename=None, tags=None, modtime_generator
                 persistent=False,
             )
         new_entries.append(new_entry)
-    with scope() as session:
+    with _json_scope() as session:
         for new_entry in new_entries:
             session.add(new_entry)
 

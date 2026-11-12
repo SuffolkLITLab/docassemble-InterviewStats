@@ -1,8 +1,32 @@
 import random
+from contextlib import contextmanager
 from docassemble.base.generate_key import random_alphanumeric
 from docassemble.base.functions import get_current_info
 
 from .snapshot_statistics import *
+
+try:
+    from docassemble.webapp.jsonstorage.helpers import JsonStorage
+    from docassemble.webapp.db import session_scope as _json_scope
+except ModuleNotFoundError as err:
+    if err.name not in (
+        "docassemble.webapp.jsonstorage",
+        "docassemble.webapp.jsonstorage.helpers",
+        "docassemble.webapp.db",
+    ):
+        raise
+    # docassemble before 1.10 keeps these in jsonstore and uses db.session
+    from docassemble.webapp.jsonstore import JsonStorage
+    from docassemble.webapp.jsonstore import db as _legacy_db
+
+    @contextmanager
+    def _json_scope():
+        try:
+            yield _legacy_db.session
+            _legacy_db.session.commit()
+        except Exception:
+            _legacy_db.session.rollback()
+            raise
 
 __all__ = [
     "get_column_values_list",
@@ -120,41 +144,12 @@ def get_col_val_count(records_count=None, label=None, labels=None, column=None):
     return results
 
 
-def _json_store():
-    try:
-        from docassemble.webapp.jsonstorage.helpers import JsonStorage
-        from docassemble.webapp.db import session_scope
-    except ModuleNotFoundError as err:
-        if err.name not in (
-            "docassemble.webapp.jsonstorage",
-            "docassemble.webapp.jsonstorage.helpers",
-            "docassemble.webapp.db",
-        ):
-            raise
-        from docassemble.webapp.jsonstore import JsonStorage
-        from docassemble.webapp.jsonstore import db
-
-        class _LegacyScope:
-            def __enter__(self):
-                return db.session
-
-            def __exit__(self, exc_type, exc, tb):
-                if exc_type is None:
-                    db.session.commit()
-                else:
-                    db.session.rollback()
-
-        return JsonStorage, _LegacyScope
-    return JsonStorage, session_scope
-
-
 def save_random_records(
     number_of_records, title="", seed_data_list=None, date_input=None, tags=None
 ):
     """
     Generate random survey type records for testing data reports.
     """
-    JsonStorage, scope = _json_store()
     new_entries = []
     for index in range(number_of_records):
         type_dict = dict()
@@ -191,7 +186,7 @@ def save_random_records(
             persistent=False,
         )
         new_entries.append(new_entry)
-    with scope() as session:
+    with _json_scope() as session:
         for new_entry in new_entries:
             session.add(new_entry)
 
