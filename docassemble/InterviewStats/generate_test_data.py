@@ -1,15 +1,8 @@
 from docassemble.base.generate_key import random_alphanumeric
 from docassemble.base.functions import get_current_info
 from docassemble.base.util import variables_snapshot_connection
-from docassemble.webapp.jsonstore import JsonStorage
 
-try:
-    from docassemble.webapp.jsonstore import JsonDb
-except ImportError:
-    # Will happen on 1.9.8 and up
-    from docassemble.webapp.jsonstore import db
-
-    JsonDb = db.session
+from .data_report import JsonStorage, _json_scope
 
 __all__ = ["write_random_user", "delete_data_from_interview"]
 
@@ -17,6 +10,7 @@ __all__ = ["write_random_user", "delete_data_from_interview"]
 def write_random_user(data_iterator, filename=None, tags=None, modtime_generator=None):
     if not filename:
         filename = get_current_info().get("yaml_filename", None)
+    new_entries = []
     for data in data_iterator:
         random_uid = random_alphanumeric(32)
         if modtime_generator:
@@ -36,8 +30,10 @@ def write_random_user(data_iterator, filename=None, tags=None, modtime_generator
                 tags=tags,
                 persistent=False,
             )
-        JsonDb.add(new_entry)
-    JsonDb.commit()
+        new_entries.append(new_entry)
+    with _json_scope() as session:
+        for new_entry in new_entries:
+            session.add(new_entry)
 
 
 def delete_data_from_interview(filename=None):
